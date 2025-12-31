@@ -24,7 +24,7 @@ const getApiUrl = () => {
             return `http://${LOCAL_IP}:3000/api`;
         } else {
             // Web
-            return 'http://localhost:3000/api';
+            return `http://${LOCAL_IP}:3000/api`;
         }
     }
     // Production URL (update when deploying)

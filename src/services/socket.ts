@@ -6,9 +6,10 @@ import { io, Socket } from 'socket.io-client';
 import { Platform } from 'react-native';
 
 // Use 10.0.2.2 for Android Emulator, localhost for iOS/Web
+// Use your computer's IP address for physical device testing
 const DEV_URL = Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000';
+    ? 'http://192.168.1.5:3000'
+    : 'http://192.168.1.5:3000';
 
 class SocketService {
     socket: Socket | null = null;
