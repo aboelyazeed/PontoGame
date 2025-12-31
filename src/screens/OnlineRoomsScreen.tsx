@@ -78,14 +78,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
     const slideAnim = React.useRef(new Animated.Value(0)).current;
     const [layoutWidth, setLayoutWidth] = useState(0);
 
-    // Enable LayoutAnimation for Android
-    useEffect(() => {
-        if (Platform.OS === 'android') {
-            if (UIManager.setLayoutAnimationEnabledExperimental) {
-                UIManager.setLayoutAnimationEnabledExperimental(true);
-            }
-        }
-    }, []);
+
 
     useEffect(() => {
         Animated.timing(slideAnim, {
