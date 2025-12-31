@@ -60,6 +60,105 @@ export function setupGameSocket(io: Server) {
         socket.emit('connected', { playerId: socket.userId! });
 
         // ========================================
+        // Room Events
+        // ========================================
+
+        socket.on('create_room', async ({ isPrivate, password }) => {
+            console.log(`🏠 ${socket.username} creating room (Private: ${isPrivate}, HasPassword: ${!!password})`);
+
+            const entry: QueueEntry = {
+                odium: socket.userId!,
+                socketId: socket.id,
+                username: socket.username!,
+                displayName: socket.displayName!,
+                level: socket.level!,
+                rank: socket.rank!,
+                joinedAt: Date.now(),
+            };
+
+            const room = await gameService.createRoom(entry, isPrivate, password);
+            socket.join(`game:${room.id}`);
+
+            // Notify creator
+            socket.emit('room_created', room);
+
+            // Broadcast update to all (except creator if private)
+            if (!isPrivate) {
+                io.emit('rooms_list_update', gameService.getAvailableRooms());
+            }
+        });
+
+        socket.on('get_rooms', () => {
+            socket.emit('rooms_list', gameService.getAvailableRooms());
+        });
+
+        socket.on('join_room', ({ roomId, password }) => {
+            console.log(`🚪 ${socket.username} joining room ${roomId}`);
+
+            const entry: QueueEntry = {
+                odium: socket.userId!,
+                socketId: socket.id,
+                username: socket.username!,
+                displayName: socket.displayName!,
+                level: socket.level!,
+                rank: socket.rank!,
+                joinedAt: Date.now(),
+            };
+
+            const room = gameService.joinRoom(roomId, entry, password);
+
+            if (room) {
+                const roomId = `game:${room.id}`;
+                socket.join(roomId);
+
+                // Notify players
+                io.to(roomId).emit('game_start', room);
+                io.to(roomId).emit('turn_start', {
+                    playerId: room.currentTurn,
+                    timeLimit: room.turnTimeLimit
+                });
+
+                // Update rooms list for everyone else
+                io.emit('rooms_list_update', gameService.getAvailableRooms());
+            } else {
+                socket.emit('error', { message: 'الغرفة ممتلئة أو كلمة المرور غير صحيحة', code: 'ROOM_ERROR' });
+            }
+        });
+
+        socket.on('join_room_by_code', ({ roomCode, password }) => {
+            console.log(`🔑 ${socket.username} joining room with code ${roomCode}`);
+
+            const entry: QueueEntry = {
+                odium: socket.userId!,
+                socketId: socket.id,
+                username: socket.username!,
+                displayName: socket.displayName!,
+                level: socket.level!,
+                rank: socket.rank!,
+                joinedAt: Date.now(),
+            };
+
+            const room = gameService.joinRoomByCode(roomCode, entry, password);
+
+            if (room) {
+                const roomId = `game:${room.id}`;
+                socket.join(roomId);
+
+                // Notify players
+                io.to(roomId).emit('game_start', room);
+                io.to(roomId).emit('turn_start', {
+                    playerId: room.currentTurn,
+                    timeLimit: room.turnTimeLimit
+                });
+
+                // Update rooms list for everyone else
+                io.emit('rooms_list_update', gameService.getAvailableRooms());
+            } else {
+                socket.emit('error', { message: 'رمز الغرفة غير صحيح أو كلمة المرور خطأ', code: 'INVALID_ROOM_CODE' });
+            }
+        });
+
+        // ========================================
         // Matchmaking Events
         // ========================================
 

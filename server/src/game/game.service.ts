@@ -17,6 +17,8 @@ import {
 // ==========================================
 const matchmakingQueue: QueueEntry[] = [];
 const activeGames: Map<string, GameState> = new Map();
+const activeRooms: Map<string, GameState> = new Map(); // gameId -> GameState (Waiting rooms)
+const roomCodes: Map<string, string> = new Map(); // roomCode -> gameId
 const playerToGame: Map<string, string> = new Map(); // odium -> gameId
 
 // ==========================================
@@ -141,13 +143,102 @@ export class GameService {
         };
     }
 
-    private dealCards(player: PlayerState) {
-        // Shuffle and deal 7 cards
-        const shuffled = [...SAMPLE_CARDS].sort(() => Math.random() - 0.5);
-        player.hand = shuffled.slice(0, 7).map(card => ({
-            ...card,
-            id: uuidv4(), // Give each instance a unique ID
-        }));
+    // ========================================
+    // Room Management (New)
+    // ========================================
+
+    async createRoom(host: QueueEntry, isPrivate: boolean = false, password?: string): Promise<GameState> {
+        // Remove from queue if in it
+        this.removeFromQueue(host.odium);
+
+        const gameId = uuidv4();
+        const roomCode = this.generateRoomCode();
+
+        // Create initial game state (Waiting room)
+        const gameState: GameState = {
+            id: gameId,
+            roomCode,
+            status: 'waiting',
+            currentTurn: host.odium,
+            turnPhase: 'play',
+            turnNumber: 0,
+            turnStartTime: 0,
+            turnTimeLimit: 60,
+
+            player1: this.createPlayerState(host),
+            player2: null, // Waiting for second player
+
+            // Custom room properties can be added here
+            isPrivate,
+            hasPassword: !!password,
+            password,
+        } as any; // Cast to GameState (we might need to extend GameState type)
+
+        // Store room
+        activeRooms.set(gameId, gameState);
+        roomCodes.set(roomCode, gameId);
+        playerToGame.set(host.odium, gameId);
+
+        return gameState;
+    }
+
+    getAvailableRooms(): GameState[] {
+        return Array.from(activeRooms.values())
+            .filter(room => room.status === 'waiting' && !room.player2)
+            .map(room => {
+                const { password, ...safeRoom } = room as any;
+                return safeRoom;
+            });
+    }
+
+    joinRoom(gameId: string, player: QueueEntry, password?: string): GameState | null {
+        const room = activeRooms.get(gameId);
+        if (!room || room.status !== 'waiting' || room.player2) {
+            return null;
+        }
+
+        // Check password if private
+        if ((room as any).isPrivate && (room as any).password) {
+            if ((room as any).password !== password) {
+                // Or return a specific error code? For now simplify to returning null
+                return null;
+            }
+        }
+
+        // Add player 2
+        room.player2 = this.createPlayerState(player);
+        this.dealCards(room.player1);
+        this.dealCards(room.player2);
+
+        // Move from rooms to active games
+        activeRooms.delete(gameId);
+        activeGames.set(gameId, room);
+
+        // Update mappings
+        playerToGame.set(player.odium, gameId);
+
+        // Initialize game start
+        room.status = 'starting';
+        room.turnStartTime = Date.now();
+        room.turnNumber = 1;
+
+        return room;
+    }
+
+    joinRoomByCode(roomCode: string, player: QueueEntry, password?: string): GameState | null {
+        const gameId = roomCodes.get(roomCode);
+        if (!gameId) return null;
+
+        return this.joinRoom(gameId, player, password);
+    }
+
+    private generateRoomCode(): string {
+        // Generate random 6-digit number string
+        let code = '';
+        do {
+            code = Math.floor(100000 + Math.random() * 900000).toString();
+        } while (roomCodes.has(code)); // Ensure uniqueness
+        return code;
     }
 
     // ========================================
@@ -305,6 +396,9 @@ export class GameService {
         if (gameState.player2) {
             playerToGame.delete(gameState.player2.odium);
         }
+        if (gameState.roomCode) {
+            roomCodes.delete(gameState.roomCode);
+        }
     }
 
     // ========================================
@@ -321,6 +415,15 @@ export class GameService {
         if (gameState.player1.odium === odium) return gameState.player2;
         if (gameState.player2?.odium === odium) return gameState.player1;
         return null;
+    }
+
+    private dealCards(player: PlayerState) {
+        // Shuffle and deal 7 cards
+        const shuffled = [...SAMPLE_CARDS].sort(() => Math.random() - 0.5);
+        player.hand = shuffled.slice(0, 7).map(card => ({
+            ...card,
+            id: uuidv4(), // Give each instance a unique ID
+        }));
     }
 }
 

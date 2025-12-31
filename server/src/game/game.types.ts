@@ -37,6 +37,10 @@ export interface PlayerState {
 // Game State
 export interface GameState {
     id: string;
+    roomCode?: string;
+    isPrivate?: boolean;
+    hasPassword?: boolean;
+    password?: string; // Internal use only
     status: 'waiting' | 'starting' | 'playing' | 'finished';
     currentTurn: string; // odium of player whose turn it is
     turnPhase: 'draw' | 'play' | 'attack' | 'end';
@@ -78,6 +82,12 @@ export interface ClientToServerEvents {
     join_queue: () => void;
     leave_queue: () => void;
 
+    // Room Management
+    create_room: (data: { isPrivate: boolean; password?: string }) => void;
+    get_rooms: () => void;
+    join_room: (data: { roomId: string; password?: string }) => void;
+    join_room_by_code: (data: { roomCode: string; password?: string }) => void;
+
     // Game Actions
     ready: () => void;
     play_card: (data: { cardId: string; slotIndex: number }) => void;
@@ -100,6 +110,11 @@ export interface ServerToClientEvents {
     queue_joined: (data: { position: number }) => void;
     queue_left: () => void;
     match_found: (data: { opponentName: string }) => void;
+
+    // Room Management
+    room_created: (room: GameState) => void;
+    rooms_list: (rooms: GameState[]) => void;
+    rooms_list_update: (rooms: GameState[]) => void;
 
     // Game Events
     game_start: (gameState: GameState) => void;

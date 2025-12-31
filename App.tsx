@@ -15,6 +15,7 @@ import {
     AuthScreen,
     MainTabsScreen,
     GameModeScreen,
+    OnlineRoomsScreen,
     GamePlayScreen,
     GameOverScreen,
 } from './src/screens';
@@ -32,6 +33,7 @@ type RootStackParamList = {
     Auth: undefined;
     MainTabs: undefined;
     GameMode: undefined;
+    OnlineRooms: undefined;
     GamePlay: undefined;
     GameOver: {
         winnerName: string;
@@ -102,6 +104,27 @@ export default function App() {
                                         <GameModeScreen
                                             onBack={() => navigation.goBack()}
                                             onStartGame={(mode) => {
+                                                if (mode === 'online') {
+                                                    navigation.navigate('OnlineRooms');
+                                                } else {
+                                                    // Local game logic (future)
+                                                    navigation.navigate('GamePlay');
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                </Stack.Screen>
+
+                                <Stack.Screen name="OnlineRooms">
+                                    {({ navigation }) => (
+                                        <OnlineRoomsScreen
+                                            onBack={() => navigation.goBack()}
+                                            onJoinRoom={(roomId) => {
+                                                navigation.navigate('GamePlay');
+                                            }}
+                                            onCreateRoom={(isPrivate) => {
+                                                // Should eventually navigate to waiting room
+                                                // For now, go to GamePlay as mock
                                                 navigation.navigate('GamePlay');
                                             }}
                                         />
