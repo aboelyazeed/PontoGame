@@ -24,11 +24,13 @@ I18nManager.forceRTL(true);
 interface SettingsScreenProps {
     onBack: () => void;
     onNavigate: (screen: 'profile' | 'play' | 'settings') => void;
+    hideBottomNav?: boolean;
 }
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({
     onBack,
     onNavigate,
+    hideBottomNav = false,
 }) => {
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [musicEnabled, setMusicEnabled] = useState(true);
@@ -137,10 +139,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </SafeAreaView>
 
             {/* Bottom Navigation */}
-            <BottomNavBar
-                activeTab="settings"
-                onTabPress={(tab) => onNavigate(tab)}
-            />
+            {!hideBottomNav && (
+                <BottomNavBar
+                    activeTab="settings"
+                    onTabPress={(tab) => onNavigate(tab)}
+                />
+            )}
         </View>
     );
 };

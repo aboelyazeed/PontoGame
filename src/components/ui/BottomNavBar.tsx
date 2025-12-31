@@ -2,13 +2,14 @@
 // Ponto Game - Bottom Navigation Bar
 // ==========================================
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
     I18nManager,
+    Animated,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
@@ -27,25 +28,63 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({
     activeTab,
     onTabPress,
 }) => {
+    // Animation values for each tab
+    const settingsScale = useRef(new Animated.Value(activeTab === 'settings' ? 1.1 : 1)).current;
+    const profileScale = useRef(new Animated.Value(activeTab === 'profile' ? 1.1 : 1)).current;
+    const playScale = useRef(new Animated.Value(1)).current;
+
+    // Animate on tab change
+    useEffect(() => {
+        Animated.parallel([
+            Animated.spring(settingsScale, {
+                toValue: activeTab === 'settings' ? 1.1 : 1,
+                useNativeDriver: true,
+                friction: 5,
+            }),
+            Animated.spring(profileScale, {
+                toValue: activeTab === 'profile' ? 1.1 : 1,
+                useNativeDriver: true,
+                friction: 5,
+            }),
+        ]).start();
+    }, [activeTab]);
+
+    const handlePlayPress = () => {
+        Animated.sequence([
+            Animated.spring(playScale, {
+                toValue: 0.9,
+                useNativeDriver: true,
+                friction: 3,
+            }),
+            Animated.spring(playScale, {
+                toValue: 1,
+                useNativeDriver: true,
+                friction: 3,
+            }),
+        ]).start();
+        onTabPress('play');
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.navContent}>
-                {/* Profile Tab */}
+                {/* Profile Tab (Right side in RTL) */}
                 <TouchableOpacity
                     style={styles.tabItem}
                     onPress={() => onTabPress('profile')}
                     activeOpacity={0.7}
                 >
-                    <View style={[
+                    <Animated.View style={[
                         styles.tabIconContainer,
                         activeTab === 'profile' && styles.tabIconContainerActive,
+                        { transform: [{ scale: profileScale }] },
                     ]}>
                         <Ionicons
                             name={activeTab === 'profile' ? 'person' : 'person-outline'}
                             size={28}
                             color={activeTab === 'profile' ? COLORS.primary : COLORS.textSlate}
                         />
-                    </View>
+                    </Animated.View>
                     <Text style={[
                         styles.tabLabel,
                         activeTab === 'profile' && styles.tabLabelActive,
@@ -57,35 +96,39 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 {/* Play Tab (Center - Elevated) */}
                 <TouchableOpacity
                     style={styles.centerTabItem}
-                    onPress={() => onTabPress('play')}
+                    onPress={handlePlayPress}
                     activeOpacity={0.8}
                 >
-                    <View style={styles.centerTabButton}>
+                    <Animated.View style={[
+                        styles.centerTabButton,
+                        { transform: [{ scale: playScale }] },
+                    ]}>
                         <MaterialCommunityIcons
                             name="soccer"
                             size={32}
                             color={COLORS.textPrimary}
                         />
-                    </View>
+                    </Animated.View>
                     <Text style={styles.centerTabLabel}>العب</Text>
                 </TouchableOpacity>
 
-                {/* Settings Tab */}
+                {/* Settings Tab (Left side in RTL) */}
                 <TouchableOpacity
                     style={styles.tabItem}
                     onPress={() => onTabPress('settings')}
                     activeOpacity={0.7}
                 >
-                    <View style={[
+                    <Animated.View style={[
                         styles.tabIconContainer,
                         activeTab === 'settings' && styles.tabIconContainerActive,
+                        { transform: [{ scale: settingsScale }] },
                     ]}>
                         <Ionicons
                             name={activeTab === 'settings' ? 'settings' : 'settings-outline'}
                             size={28}
                             color={activeTab === 'settings' ? COLORS.primary : COLORS.textSlate}
                         />
-                    </View>
+                    </Animated.View>
                     <Text style={[
                         styles.tabLabel,
                         activeTab === 'settings' && styles.tabLabelActive,

@@ -32,6 +32,7 @@ interface ProfileScreenProps {
     onEditProfile?: () => void;
     onNavigate: (screen: 'profile' | 'play' | 'settings') => void;
     onLogout?: () => void;
+    hideBottomNav?: boolean;
     playerData?: {
         name: string;
         title: string;
@@ -49,6 +50,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onEditProfile,
     onNavigate,
     onLogout,
+    hideBottomNav = false,
 }) => {
     const [menuVisible, setMenuVisible] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -325,10 +327,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </Modal>
 
             {/* Bottom Navigation */}
-            <BottomNavBar
-                activeTab="profile"
-                onTabPress={(tab) => onNavigate(tab)}
-            />
+            {!hideBottomNav && (
+                <BottomNavBar
+                    activeTab="profile"
+                    onTabPress={(tab) => onNavigate(tab)}
+                />
+            )}
         </View>
     );
 };

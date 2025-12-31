@@ -27,6 +27,7 @@ interface MainMenuScreenProps {
     onPlayWifi?: () => void;
     onSettings?: () => void;
     onProfile?: () => void;
+    hideBottomNav?: boolean;
 }
 
 const MainMenuScreen: React.FC<MainMenuScreenProps> = ({
@@ -35,6 +36,7 @@ const MainMenuScreen: React.FC<MainMenuScreenProps> = ({
     onPlayWifi,
     onSettings,
     onProfile,
+    hideBottomNav = false,
 }) => {
     const { user } = useAuthStore();
 
@@ -156,10 +158,12 @@ const MainMenuScreen: React.FC<MainMenuScreenProps> = ({
             </SafeAreaView>
 
             {/* Bottom Navigation */}
-            <BottomNavBar
-                activeTab="play"
-                onTabPress={handleTabPress}
-            />
+            {!hideBottomNav && (
+                <BottomNavBar
+                    activeTab="play"
+                    onTabPress={handleTabPress}
+                />
+            )}
         </View>
     );
 };

@@ -13,9 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
     SplashScreen,
     AuthScreen,
-    MainMenuScreen,
-    ProfileScreen,
-    SettingsScreen,
+    MainTabsScreen,
     GameModeScreen,
     GamePlayScreen,
     GameOverScreen,
@@ -31,9 +29,7 @@ I18nManager.allowRTL(true);
 type RootStackParamList = {
     Splash: undefined;
     Auth: undefined;
-    MainMenu: undefined;
-    Profile: undefined;
-    Settings: undefined;
+    MainTabs: undefined;
     GameMode: undefined;
     GamePlay: undefined;
     GameOver: {
@@ -69,7 +65,7 @@ export default function App() {
                 ) : (
                     <NavigationContainer>
                         <Stack.Navigator
-                            initialRouteName={isAuthenticated ? "MainMenu" : "Auth"}
+                            initialRouteName={isAuthenticated ? "MainTabs" : "Auth"}
                             screenOptions={{
                                 headerShown: false,
                                 cardStyle: { backgroundColor: COLORS.backgroundDark },
@@ -81,52 +77,20 @@ export default function App() {
                                     <AuthScreen
                                         onAuthSuccess={() => navigation.reset({
                                             index: 0,
-                                            routes: [{ name: 'MainMenu' }],
+                                            routes: [{ name: 'MainTabs' }],
                                         })}
                                     />
                                 )}
                             </Stack.Screen>
 
-                            <Stack.Screen name="MainMenu">
+                            <Stack.Screen name="MainTabs">
                                 {({ navigation }) => (
-                                    <MainMenuScreen
-                                        onPlayLocal={() => navigation.navigate('GameMode')}
-                                        onProfile={() => navigation.navigate('Profile')}
-                                        onSettings={() => navigation.navigate('Settings')}
-                                    />
-                                )}
-                            </Stack.Screen>
-
-                            <Stack.Screen name="Profile">
-                                {({ navigation }) => (
-                                    <ProfileScreen
-                                        onBack={() => navigation.goBack()}
+                                    <MainTabsScreen
+                                        onPlayGame={() => navigation.navigate('GameMode')}
                                         onLogout={() => navigation.reset({
                                             index: 0,
                                             routes: [{ name: 'Auth' }],
                                         })}
-                                        onNavigate={(screen) => {
-                                            if (screen === 'play') {
-                                                navigation.navigate('GameMode');
-                                            } else if (screen === 'settings') {
-                                                navigation.navigate('Settings');
-                                            }
-                                        }}
-                                    />
-                                )}
-                            </Stack.Screen>
-
-                            <Stack.Screen name="Settings">
-                                {({ navigation }) => (
-                                    <SettingsScreen
-                                        onBack={() => navigation.goBack()}
-                                        onNavigate={(screen) => {
-                                            if (screen === 'play') {
-                                                navigation.navigate('GameMode');
-                                            } else if (screen === 'profile') {
-                                                navigation.navigate('Profile');
-                                            }
-                                        }}
                                     />
                                 )}
                             </Stack.Screen>
@@ -161,7 +125,7 @@ export default function App() {
                                     <GameOverScreen
                                         {...route.params}
                                         onPlayAgain={() => navigation.replace('GamePlay')}
-                                        onMainMenu={() => navigation.navigate('MainMenu')}
+                                        onMainMenu={() => navigation.navigate('MainTabs')}
                                     />
                                 )}
                             </Stack.Screen>
