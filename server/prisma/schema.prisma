@@ -1,0 +1,104 @@
+// ==========================================
+// Ponto Game - Prisma Schema
+// ==========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// User Model
+// ==========================================
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  displayName   String
+  
+  // Game Stats
+  level         Int      @default(1)
+  xp            Int      @default(0)
+  coins         Int      @default(1000)
+  rank          String   @default("مبتدئ")
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  winStreak     Int      @default(0)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  
+  // Relations
+  gamesAsPlayer1  Game[] @relation("Player1Games")
+  gamesAsPlayer2  Game[] @relation("Player2Games")
+  refreshTokens   RefreshToken[]
+}
+
+// ==========================================
+// Refresh Token Model
+// ==========================================
+model RefreshToken {
+  id          String   @id @default(uuid())
+  token       String   @unique
+  userId      String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// Game Model
+// ==========================================
+model Game {
+  id            String     @id @default(uuid())
+  status        GameStatus @default(WAITING)
+  mode          GameMode   @default(ONLINE)
+  
+  // Players
+  player1Id     String
+  player2Id     String?
+  
+  // Scores
+  player1Score  Int        @default(0)
+  player2Score  Int        @default(0)
+  
+  // Result
+  winnerId      String?
+  
+  // Game State (JSON for flexibility)
+  gameState     Json?
+  
+  // Timestamps
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  startedAt     DateTime?
+  endedAt       DateTime?
+  
+  // Relations
+  player1       User       @relation("Player1Games", fields: [player1Id], references: [id])
+  player2       User?      @relation("Player2Games", fields: [player2Id], references: [id])
+}
+
+// ==========================================
+// Enums
+// ==========================================
+enum GameStatus {
+  WAITING      // Waiting for opponent
+  IN_PROGRESS  // Game is active
+  COMPLETED    // Game finished normally
+  CANCELLED    // Game was cancelled
+  ABANDONED    // Player disconnected
+}
+
+enum GameMode {
+  ONLINE       // Random matchmaking
+  PRIVATE      // Invite friends
+}

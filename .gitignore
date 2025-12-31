@@ -39,3 +39,15 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Environment files (sensitive!)
+.env
+*.env
+server/.env
+
+# Server build
+server/dist/
+server/node_modules/
+
+# Prisma
+server/prisma/*.db
