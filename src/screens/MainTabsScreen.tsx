@@ -47,6 +47,13 @@ const MainTabsScreen: React.FC<MainTabsScreenProps> = ({
 
     const handleTabPress = (tab: 'settings' | 'play' | 'profile') => {
         const pageIndex = getPageIndex(tab);
+
+        // If already on Play tab (MainMenu) and Play is pressed, go to GameMode
+        if (tab === 'play' && currentPage === 1) {
+            onPlayGame();
+            return;
+        }
+
         pagerRef.current?.setPage(pageIndex);
     };
 
