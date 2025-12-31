@@ -59,6 +59,10 @@ export function setupGameSocket(io: Server) {
         // Send connection confirmation
         socket.emit('connected', { playerId: socket.userId! });
 
+        // Broadcast online users count
+        const onlineCount = io.engine.clientsCount;
+        io.emit('online_users_update', { count: onlineCount });
+
         // ========================================
         // Room Events
         // ========================================
@@ -90,6 +94,11 @@ export function setupGameSocket(io: Server) {
 
         socket.on('get_rooms', () => {
             socket.emit('rooms_list', gameService.getAvailableRooms());
+        });
+
+        socket.on('get_online_count', () => {
+            const count = io.engine.clientsCount;
+            socket.emit('online_users_update', { count });
         });
 
         socket.on('join_room', ({ roomId, password }) => {
@@ -374,6 +383,10 @@ export function setupGameSocket(io: Server) {
 
         socket.on('disconnect', () => {
             console.log(`🔌 Player disconnected: ${socket.username}`);
+
+            // Broadcast updated online count
+            const onlineCount = io.engine.clientsCount;
+            io.emit('online_users_update', { count: onlineCount });
 
             // Remove from queue
             gameService.removeFromQueue(socket.userId!);

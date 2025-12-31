@@ -33,19 +33,28 @@ import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../context/ToastContext';
 import Button from '../components/ui/Button';
-// import { socketService } from '../services/socket'; // Will implement later
+import { socketService } from '../services/socket';
 
 // Force RTL
 I18nManager.forceRTL(true);
 
 interface Room {
     id: string;
-    players: number; // 1 or 2
-    maxPlayers: number;
-    status: 'waiting' | 'starting' | 'playing';
-    hostName: string;
     isPrivate: boolean;
     hasPassword?: boolean;
+    roomCode?: string;
+    players: number;
+    maxPlayers: number;
+    status: 'waiting' | 'playing';
+    hostName: string;
+    hostAvatar?: string;
+    player1?: {
+        odiumInfo?: {
+            displayName: string;
+            level: number;
+            rank: string;
+        }
+    }
 }
 
 interface OnlineRoomsScreenProps {
@@ -62,6 +71,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
     const { user } = useAuthStore();
     const { showToast } = useToast();
     const [rooms, setRooms] = useState<Room[]>([]);
+    const [onlineUsersCount, setOnlineUsersCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -74,7 +84,11 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
     const [isPrivateRoom, setIsPrivateRoom] = useState(false);
     const [roomPassword, setRoomPassword] = useState('');
 
-    // Animation Refs
+    // Password Modal State (Missing)
+    const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+    const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+
     const slideAnim = React.useRef(new Animated.Value(0)).current;
     const [layoutWidth, setLayoutWidth] = useState(0);
 
@@ -94,105 +108,152 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
         setIsPrivateRoom(value);
     };
 
-    // Mock Data for Design (Replace with Socket Data)
-    useEffect(() => {
-        loadRooms();
-    }, []);
+    // ==========================================
+    // Socket Integration
+    // ==========================================
 
-    const loadRooms = () => {
+    useEffect(() => {
         setIsLoading(true);
-        // Simulate fetch
-        setTimeout(() => {
-            setRooms([
-                {
-                    id: '1',
-                    players: 1,
-                    maxPlayers: 2,
-                    status: 'waiting',
-                    hostName: 'كابتن ماجد',
-                    isPrivate: false,
-                },
-                {
-                    id: '2',
-                    players: 1,
-                    maxPlayers: 2,
-                    status: 'waiting',
-                    hostName: 'الحريف',
-                    isPrivate: true,
-                    hasPassword: true,
-                },
-                {
-                    id: '3',
-                    players: 1,
-                    maxPlayers: 2,
-                    status: 'waiting',
-                    hostName: 'زيزو',
-                    isPrivate: false,
-                },
-            ]);
+        socketService.emit('get_rooms');
+        socketService.emit('get_online_count'); // Fetch count immediately on mount
+
+        const handleRoomsUpdate = (updatedRooms: any[]) => {
+            const mappedRooms: Room[] = updatedRooms.map(room => ({
+                id: room.id,
+                isPrivate: room.isPrivate,
+                hasPassword: room.hasPassword,
+                roomCode: room.roomCode,
+                players: room.player2 ? 2 : 1,
+                maxPlayers: 2,
+                status: room.status,
+                hostName: room.player1?.odiumInfo?.displayName || 'Unknown',
+                hostAvatar: undefined,
+                player1: room.player1
+            }));
+            setRooms(mappedRooms);
             setIsLoading(false);
             setIsRefreshing(false);
-        }, 1000);
-    };
+        };
+
+        const handleOnlineUsersUpdate = (data: { count: number }) => {
+            setOnlineUsersCount(data.count);
+        };
+
+        const handleRoomCreated = (room: any) => {
+            setCreateModalVisible(false);
+            showToast('تم إنشاء الغرفة بنجاح', 'success');
+            // Navigate to game/waiting
+            onCreateRoom(room.isPrivate, room.password);
+            onJoinRoom(room.id);
+        };
+
+        const handleGameStart = (room: any) => {
+            setJoinModalVisible(false);
+            setIsPasswordModalVisible(false);
+            showToast('بدأت اللعبة!', 'success');
+            onJoinRoom(room.id);
+        };
+
+        const handleError = (error: { message: string, code: string }) => {
+            showToast(error.message || 'حدث خطأ ما', 'error');
+            setIsRefreshing(false);
+            setIsLoading(false);
+        };
+
+        socketService.on('rooms_list_update', handleRoomsUpdate);
+        socketService.on('rooms_list', handleRoomsUpdate);
+        socketService.on('room_created', handleRoomCreated);
+        socketService.on('game_start', handleGameStart);
+        socketService.on('online_users_update', handleOnlineUsersUpdate); // Listen for count
+        socketService.on('error', handleError);
+
+        return () => {
+            socketService.off('rooms_list_update');
+            socketService.off('rooms_list');
+            socketService.off('room_created');
+            socketService.off('game_start');
+            socketService.off('online_users_update');
+            socketService.off('error');
+        };
+    }, []);
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        loadRooms();
+        socketService.emit('get_rooms');
     };
+
+    // ==========================================
+    // Handlers
+    // ==========================================
 
     const handleCreateRoomSubmit = () => {
-        if (isPrivateRoom && roomPassword.length < 3) {
-            showToast('كلمة المرور يجب أن تكون 3 أحرف على الأقل', 'error');
-            return;
+        if (isPrivateRoom && !roomPassword) {
+            // Optional: enforce password for private rooms
         }
 
-        onCreateRoom(isPrivateRoom, isPrivateRoom ? roomPassword : undefined);
-        setCreateModalVisible(false);
-        setRoomPassword('');
-        setIsPrivateRoom(false);
+        socketService.emit('create_room', {
+            isPrivate: isPrivateRoom,
+            password: roomPassword || undefined
+        });
     };
 
-    const handleJoinRoom = (roomId: string, hasPassword?: boolean) => {
-        if (hasPassword) {
-            // Should prompt for password to join
-            showToast('هذه الغرفة محمية بكلمة مرور (قريباً)', 'info');
-            // Logic to prompt password would go here
-            return;
+    const handleJoinRoom = (room: Room) => {
+        if (room.isPrivate && room.hasPassword) {
+            setSelectedRoomId(room.id);
+            setRoomPassword('');
+            setIsPasswordModalVisible(true);
+        } else {
+            showToast('جاري الانضمام...', 'info');
+            socketService.emit('join_room', { roomId: room.id });
         }
-        onJoinRoom(roomId);
+    };
+
+    const handlePasswordSubmit = () => {
+        if (!selectedRoomId || !roomPassword) return;
+        socketService.emit('join_room', {
+            roomId: selectedRoomId,
+            password: roomPassword
+        });
     };
 
     const handleJoinByCode = () => {
         if (roomCode.length !== 6) {
-            showToast('الرجاء إدخال رمز مكون من 6 أرقام', 'error');
+            showToast('رمز الغرفة يجب أن يكون 6 أرقام', 'error');
             return;
         }
-
-        // Emulate join logic
-        // socketService.emit('join_room_by_code', { roomCode });
-
-        setJoinModalVisible(false);
-        setRoomCode('');
-
-        // For now mock navigation
-        onJoinRoom('mock-room-id');
+        showToast('جاري البحث...', 'info');
+        socketService.emit('join_room_by_code', {
+            roomCode: roomCode,
+            // Add password if UI supports it later
+        });
     };
 
     const handleRandomJoin = () => {
-        // Find first available public room
+        // In future, this should emit 'join_queue' for matchmaking
+        // For now, find a public room
         const availableRoom = rooms.find(r => !r.isPrivate && r.players < r.maxPlayers);
         if (availableRoom) {
-            onJoinRoom(availableRoom.id);
+            handleJoinRoom(availableRoom);
         } else {
-            showToast('لا توجد غرف متاحة حالياً', 'info');
+            showToast('لا توجد غرف عامة متاحة', 'info');
         }
     };
+
+    const filteredRooms = rooms.filter(room => {
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            return (
+                room.hostName.toLowerCase().includes(query) ||
+                (room.roomCode && room.roomCode.includes(query))
+            );
+        }
+        return true;
+    });
 
     const renderRoomItem = ({ item }: { item: Room }) => {
         if (item.players >= item.maxPlayers) return null;
 
         const isPrivate = item.isPrivate;
-
         const cardStyle = isPrivate
             ? { borderColor: 'rgba(249, 115, 22, 0.2)', iconColor: '#F97316', bg: 'rgba(249, 115, 22, 0.1)', icon: 'lock-outline' }
             : { borderColor: 'rgba(59, 130, 246, 0.2)', iconColor: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', icon: 'trophy-outline' };
@@ -200,7 +261,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
         return (
             <TouchableOpacity
                 style={[styles.roomCard, { borderColor: cardStyle.borderColor }]}
-                onPress={() => handleJoinRoom(item.id, item.hasPassword)}
+                onPress={() => handleJoinRoom(item)}
                 activeOpacity={0.7}
             >
                 <View style={styles.roomInfo}>
@@ -209,7 +270,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
                     </View>
                     <View>
                         <Text style={styles.roomTitle}>
-                            {isPrivate ? 'غرفة سرية' : 'غرفة تحدي'}
+                            {item.roomCode ? `غرفة ${item.roomCode}` : 'غرفة تحدي'}
                         </Text>
                         <View style={styles.roomMetaRow}>
                             <View style={styles.tagContainer}>
@@ -247,7 +308,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
 
                     <View style={styles.onlineBadge}>
                         <View style={styles.onlineDot} />
-                        <Text style={styles.onlineText}>1,240 متصل</Text>
+                        <Text style={styles.onlineText}>{onlineUsersCount} متصل</Text>
                     </View>
                 </View>
 
