@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { useAuthStore } from '../store/authStore';
 
 // Force RTL
 I18nManager.forceRTL(true);
@@ -36,13 +37,16 @@ interface GameModeScreenProps {
 const GameModeScreen: React.FC<GameModeScreenProps> = ({
     onBack,
     onStartGame,
-    playerStats = {
-        wins: 124,
-        rank: 'أسطوري',
-        xp: 5890,
-        winStreak: 7,
-    },
 }) => {
+    const { user } = useAuthStore();
+
+    // Default stats if user data is missing (should generally not happen if logged in)
+    const stats = {
+        wins: user?.wins || 0,
+        rank: user?.rank || 'مبتدئ',
+        xp: user?.xp || 0,
+        winStreak: user?.winStreak || 0,
+    };
     const [selectedMode, setSelectedMode] = useState<GameMode>('online');
 
     return (
@@ -82,25 +86,25 @@ const GameModeScreen: React.FC<GameModeScreenProps> = ({
                             <View style={styles.statItem}>
                                 <Ionicons name="trophy" size={24} color={COLORS.primary} />
                                 <Text style={styles.statLabel}>الانتصارات</Text>
-                                <Text style={styles.statValue}>{playerStats.wins}</Text>
+                                <Text style={styles.statValue}>{stats.wins}</Text>
                             </View>
 
                             <View style={styles.statItem}>
                                 <MaterialCommunityIcons name="medal" size={24} color={COLORS.primary} />
                                 <Text style={styles.statLabel}>الرتبة</Text>
-                                <Text style={styles.statValue}>{playerStats.rank}</Text>
+                                <Text style={styles.statValue}>{stats.rank}</Text>
                             </View>
 
                             <View style={styles.statItem}>
                                 <Ionicons name="star" size={24} color={COLORS.primary} />
                                 <Text style={styles.statLabel}>نقاط الخبرة</Text>
-                                <Text style={styles.statValue}>{playerStats.xp.toLocaleString()}</Text>
+                                <Text style={styles.statValue}>{stats.xp.toLocaleString()}</Text>
                             </View>
 
                             <View style={styles.statItem}>
                                 <MaterialCommunityIcons name="fire" size={24} color={COLORS.primary} />
                                 <Text style={styles.statLabel}>سلسلة انتصارات</Text>
-                                <Text style={styles.statValue}>{playerStats.winStreak}</Text>
+                                <Text style={styles.statValue}>{stats.winStreak}</Text>
                             </View>
                         </View>
                     </View>

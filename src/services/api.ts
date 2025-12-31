@@ -4,6 +4,7 @@
 
 import axios from 'axios';
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 // ⚠️ IMPORTANT: Replace with your computer's IP address for physical device testing
 // Run 'ipconfig' in terminal and find your IPv4 address (e.g., 192.168.1.x)
@@ -44,10 +45,13 @@ const api = axios.create({
 // Request interceptor for adding auth token
 api.interceptors.request.use(
     async (config) => {
-        // TODO: Get token from storage
-        const token = null;
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        try {
+            const token = await SecureStore.getItemAsync('auth_token');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        } catch (error) {
+            console.warn('Error fetching token', error);
         }
         return config;
     },

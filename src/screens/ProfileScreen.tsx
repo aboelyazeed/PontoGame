@@ -23,6 +23,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { BottomNavBar } from '../components/ui';
 import { useAuthStore } from '../store/authStore';
+import { useToast } from '../context/ToastContext';
 
 // Force RTL
 I18nManager.forceRTL(true);
@@ -56,14 +57,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [newDisplayName, setNewDisplayName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const { logout, user, updateDisplayName, deleteAccount } = useAuthStore();
-
-    // Show success toast for 3 seconds
-    const showSuccess = (message: string) => {
-        setSuccessMessage(message);
-        setTimeout(() => setSuccessMessage(null), 3000);
-    };
+    const { showToast } = useToast();
 
     // Use auth store data with fallback defaults
     const playerData = {
@@ -97,9 +92,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         try {
             await updateDisplayName(newDisplayName.trim());
             setEditModalVisible(false);
-            showSuccess('تم تحديث الاسم بنجاح ✓');
+            showToast('تم تحديث الاسم بنجاح ✓', 'success');
         } catch (error: any) {
-            Alert.alert('خطأ', error.message || 'فشل تحديث الاسم');
+            showToast(error.message || 'فشل تحديث الاسم', 'error');
         } finally {
             setIsSaving(false);
         }
@@ -118,8 +113,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         try {
                             await deleteAccount();
                             onLogout?.();
+                            showToast('تم حذف الحساب بنجاح', 'success');
                         } catch (error: any) {
-                            Alert.alert('خطأ', error.message || 'فشل حذف الحساب');
+                            showToast(error.message || 'فشل حذف الحساب', 'error');
                         }
                     },
                 },
@@ -130,13 +126,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.backgroundDark} />
 
-            {/* Success Toast */}
-            {successMessage && (
-                <View style={styles.successToast}>
-                    <Ionicons name="checkmark-circle" size={22} color="#22C55E" />
-                    <Text style={styles.successToastText}>{successMessage}</Text>
-                </View>
-            )}
+
 
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
@@ -629,30 +619,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#EF4444',
-    },
-    // Success Toast
-    successToast: {
-        position: 'absolute',
-        top: 60,
-        left: SPACING.lg,
-        right: SPACING.lg,
-        zIndex: 100,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: SPACING.sm,
-        backgroundColor: 'rgba(34, 197, 94, 0.15)',
-        borderWidth: 1,
-        borderColor: 'rgba(34, 197, 94, 0.4)',
-        borderRadius: BORDER_RADIUS.lg,
-        paddingVertical: SPACING.md,
-        paddingHorizontal: SPACING.lg,
-        ...SHADOWS.lg,
-    },
-    successToastText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#22C55E',
     },
 });
 

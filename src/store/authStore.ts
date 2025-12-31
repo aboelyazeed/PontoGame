@@ -20,6 +20,9 @@ interface User {
     rank: string;
     wins: number;
     losses: number;
+    xp: number;
+    winStreak: number;
+    createdAt?: string;
 }
 
 interface AuthState {
@@ -57,6 +60,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // Save user data (optional, for offline access)
             await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
 
+            // Set default header
+            api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+
             // Connect socket
             socketService.connect(accessToken);
 
@@ -81,6 +87,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             // Save token
             await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
+
+            // Set default header
+            api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
 
             // Connect socket
             socketService.connect(accessToken);
@@ -107,6 +116,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } finally {
             await SecureStore.deleteItemAsync(TOKEN_KEY);
             await SecureStore.deleteItemAsync(USER_KEY);
+
+            // Clear default header
+            delete api.defaults.headers.common.Authorization;
+
             socketService.disconnect();
 
             set({

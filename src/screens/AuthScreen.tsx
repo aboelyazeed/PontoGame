@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { useAuthStore } from '../store/authStore';
+import { useToast } from '../context/ToastContext';
 
 interface AuthScreenProps {
     onAuthSuccess?: () => void;
@@ -41,6 +42,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
     // Store
     const { login, register, isLoading, error, clearError } = useAuthStore();
+    const { showToast } = useToast();
 
     // Validate form
     const validateForm = (): boolean => {
@@ -87,8 +89,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 await register({ username, email, password, displayName });
             }
             onAuthSuccess?.();
-        } catch (err) {
-            // Error is handled by the store
+        } catch (err: any) {
+            const errorMessage = err.message || (isLogin ? 'فشل تسجيل الدخول' : 'فشل إنشاء الحساب');
+            showToast(errorMessage, 'error');
         }
     };
 
@@ -142,12 +145,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
                             <View style={styles.cardContent}>
                                 {/* Global Error */}
-                                {error && (
-                                    <View style={styles.globalError}>
-                                        <Ionicons name="alert-circle" size={16} color="#EF4444" />
-                                        <Text style={styles.errorText}>{error}</Text>
-                                    </View>
-                                )}
+
 
                                 {/* Username Field (Register only) */}
                                 {!isLogin && (
