@@ -451,45 +451,53 @@ export class GameService {
         gameState.status = 'finished';
         gameState.winner = winnerId;
 
-        // Update database
-        await prisma.game.update({
-            where: { id: gameState.id },
-            data: {
-                status: 'COMPLETED',
-                winnerId,
-                player1Score: gameState.player1.score,
-                player2Score: gameState.player2?.score || 0,
-                endedAt: new Date(),
-                gameState: gameState as any,
-            },
-        });
+        // Update database (wrapped in try-catch since game might not be in DB)
+        try {
+            await prisma.game.update({
+                where: { id: gameState.id },
+                data: {
+                    status: 'COMPLETED',
+                    winnerId,
+                    player1Score: gameState.player1.score,
+                    player2Score: gameState.player2?.score || 0,
+                    endedAt: new Date(),
+                    gameState: gameState as any,
+                },
+            });
+        } catch (error) {
+            console.warn('⚠️ Could not update game in database (may not exist):', error);
+        }
 
         // Update player stats
         const loserId = gameState.player1.odium === winnerId
             ? gameState.player2?.odium
             : gameState.player1.odium;
 
-        if (winnerId) {
-            await prisma.user.update({
-                where: { id: winnerId },
-                data: {
-                    wins: { increment: 1 },
-                    xp: { increment: 50 },
-                    coins: { increment: 100 },
-                    winStreak: { increment: 1 },
-                },
-            });
-        }
+        try {
+            if (winnerId) {
+                await prisma.user.update({
+                    where: { id: winnerId },
+                    data: {
+                        wins: { increment: 1 },
+                        xp: { increment: 50 },
+                        coins: { increment: 100 },
+                        winStreak: { increment: 1 },
+                    },
+                });
+            }
 
-        if (loserId) {
-            await prisma.user.update({
-                where: { id: loserId },
-                data: {
-                    losses: { increment: 1 },
-                    xp: { increment: 10 },
-                    winStreak: 0,
-                },
-            });
+            if (loserId) {
+                await prisma.user.update({
+                    where: { id: loserId },
+                    data: {
+                        losses: { increment: 1 },
+                        xp: { increment: 10 },
+                        winStreak: 0,
+                    },
+                });
+            }
+        } catch (error) {
+            console.warn('⚠️ Could not update player stats:', error);
         }
 
         // Cleanup
