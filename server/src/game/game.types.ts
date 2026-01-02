@@ -88,6 +88,9 @@ export interface ClientToServerEvents {
     get_rooms: () => void;
     join_room: (data: { roomId: string; password?: string }) => void;
     join_room_by_code: (data: { roomCode: string; password?: string }) => void;
+    leave_room: (data: { roomId: string }) => void;
+    kick_player: (data: { roomId: string; playerId: string }) => void;
+    transfer_host: (data: { roomId: string; newHostId: string }) => void;
     get_online_count: () => void;
 
     // Game Actions

@@ -218,6 +218,111 @@ export function setupGameSocket(io: Server) {
         });
 
         // ========================================
+        // Leave Room
+        // ========================================
+
+        socket.on('leave_room', ({ roomId }) => {
+            console.log(`🚪 ${socket.username} leaving room ${roomId}`);
+
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                console.log('❌ No game found for player');
+                return;
+            }
+
+            const roomSocketId = `game:${game.id}`;
+            socket.leave(roomSocketId);
+
+            const isHost = game.player1.odium === socket.userId;
+            const hasOtherPlayer = game.player2 !== null;
+
+            if (game.status === 'waiting') {
+                if (isHost && hasOtherPlayer) {
+                    // Host leaving with another player - transfer host
+                    const result = gameService.transferHost(game.id);
+                    if (result) {
+                        io.to(roomSocketId).emit('room_update', result);
+                        io.to(roomSocketId).emit('host_changed', { newHostId: result.player1.odium });
+                    }
+                } else if (isHost && !hasOtherPlayer) {
+                    // Host leaving alone - delete room
+                    gameService.deleteRoom(game.id);
+                } else if (!isHost) {
+                    // Non-host leaving - just remove them
+                    gameService.removePlayer2(game.id);
+                    io.to(roomSocketId).emit('room_update', gameService.getGameById(game.id));
+                    io.to(roomSocketId).emit('player_left', { playerId: socket.userId });
+                }
+
+                io.emit('rooms_list_update', gameService.getAvailableRooms());
+            } else {
+                // Game in progress - handle disconnect/forfeit
+                io.to(roomSocketId).emit('player_left', { playerId: socket.userId });
+            }
+        });
+
+        // ========================================
+        // Kick Player (Host only)
+        // ========================================
+
+        socket.on('kick_player', ({ roomId, playerId }) => {
+            console.log(`👢 ${socket.username} kicking player ${playerId} from room ${roomId}`);
+
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game || game.player1.odium !== socket.userId) {
+                socket.emit('error', { message: 'لا يمكنك طرد اللاعب', code: 'NOT_HOST' });
+                return;
+            }
+
+            if (!game.player2 || game.player2.odium !== playerId) {
+                socket.emit('error', { message: 'اللاعب غير موجود', code: 'PLAYER_NOT_FOUND' });
+                return;
+            }
+
+            const roomSocketId = `game:${game.id}`;
+            const kickedPlayerSocketId = game.player2.socketId;
+
+            // Notify ONLY the kicked player (by their socket ID, not room broadcast)
+            if (kickedPlayerSocketId) {
+                io.to(kickedPlayerSocketId).emit('kicked', { playerId });
+            }
+
+            // Remove player2
+            gameService.removePlayer2(game.id);
+
+            // Update room for host
+            const updatedRoom = gameService.getGameById(game.id);
+            io.to(roomSocketId).emit('room_update', updatedRoom);
+            io.emit('rooms_list_update', gameService.getAvailableRooms());
+        });
+
+        // ========================================
+        // Transfer Host
+        // ========================================
+
+        socket.on('transfer_host', ({ roomId, newHostId }) => {
+            console.log(`👑 ${socket.username} transferring host to ${newHostId}`);
+
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game || game.player1.odium !== socket.userId) {
+                socket.emit('error', { message: 'لا يمكنك نقل القيادة', code: 'NOT_HOST' });
+                return;
+            }
+
+            if (!game.player2 || game.player2.odium !== newHostId) {
+                socket.emit('error', { message: 'اللاعب غير موجود', code: 'PLAYER_NOT_FOUND' });
+                return;
+            }
+
+            const result = gameService.swapHostWithPlayer2(game.id);
+            if (result) {
+                const roomSocketId = `game:${game.id}`;
+                io.to(roomSocketId).emit('room_update', result);
+                io.to(roomSocketId).emit('host_changed', { newHostId: result.player1.odium });
+            }
+        });
+
+        // ========================================
         // Matchmaking Events
         // ========================================
 

@@ -293,6 +293,74 @@ export class GameService {
             });
     }
 
+    deleteRoom(roomId: string): boolean {
+        const room = activeRooms.get(roomId);
+        if (!room) return false;
+
+        // Clean up all references
+        if (room.player1) {
+            playerToGame.delete(room.player1.odium);
+        }
+        if (room.player2) {
+            playerToGame.delete(room.player2.odium);
+        }
+        if (room.roomCode) {
+            roomCodes.delete(room.roomCode);
+        }
+        activeRooms.delete(roomId);
+        activeGames.delete(roomId);
+
+        console.log(`🗑️ Room ${roomId} deleted`);
+        return true;
+    }
+
+    getGameById(gameId: string): GameState | null {
+        return activeRooms.get(gameId) || activeGames.get(gameId) || null;
+    }
+
+    removePlayer2(roomId: string): boolean {
+        const room = activeRooms.get(roomId);
+        if (!room || !room.player2) return false;
+
+        // Clean up player2's references
+        playerToGame.delete(room.player2.odium);
+        room.player2 = null;
+
+        console.log(`👋 Player2 removed from room ${roomId}`);
+        return true;
+    }
+
+    transferHost(roomId: string): GameState | null {
+        const room = activeRooms.get(roomId);
+        if (!room || !room.player2) return null;
+
+        // Swap player1 and player2
+        const oldHost = room.player1;
+        room.player1 = room.player2;
+        room.player2 = null;
+
+        // Update playerToGame mapping - remove old host
+        playerToGame.delete(oldHost.odium);
+        // player1 (new host) already has mapping to this room
+
+        console.log(`👑 Host transferred from ${oldHost.odiumInfo.displayName} to ${room.player1.odiumInfo.displayName}`);
+        return room;
+    }
+
+    // Manual swap - BOTH players stay, just swap positions
+    swapHostWithPlayer2(roomId: string): GameState | null {
+        const room = activeRooms.get(roomId) || activeGames.get(roomId);
+        if (!room || !room.player2) return null;
+
+        // Swap player1 and player2
+        const oldHost = room.player1;
+        room.player1 = room.player2;
+        room.player2 = oldHost;
+
+        console.log(`🔄 Host swapped: ${room.player1.odiumInfo.displayName} is now host`);
+        return room;
+    }
+
     joinRoom(gameId: string, player: QueueEntry, password?: string): GameState | null {
         const room = activeRooms.get(gameId);
         if (!room || room.status !== 'waiting' || room.player2) {

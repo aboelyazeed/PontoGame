@@ -55,6 +55,11 @@ class SocketService {
     off(event: string) {
         this.socket?.off(event);
     }
+
+    // Get current socket ID
+    getSocketId(): string | null {
+        return this.socket?.id || null;
+    }
 }
 
 export const socketService = new SocketService();

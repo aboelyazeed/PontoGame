@@ -8,6 +8,7 @@ import {
     I18nManager,
     ActivityIndicator,
     Dimensions,
+    BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Clipboard } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { socketService } from '../services/socket';
+import ConfirmPopup from '../components/ui/ConfirmPopup';
 
 I18nManager.forceRTL(true);
 
@@ -66,6 +68,7 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
     const [isStarting, setIsStarting] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [showLeavePopup, setShowLeavePopup] = useState(false);
 
     useEffect(() => {
         socketService.on('connected', (data: { playerId: string }) => {
@@ -105,14 +108,38 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             onGameStart?.(gameState);
         });
 
+        // Player left the room
+        socketService.on('player_left', (data: { playerId: string }) => {
+            console.log('👋 Player left:', data.playerId);
+            setRoom(prev => {
+                if (!prev) return null;
+                return { ...prev, player2: null };
+            });
+        });
+
+        // We got kicked
+        socketService.on('kicked', (data: { playerId: string }) => {
+            console.log('👢 Kicked from room');
+            onBack?.();
+        });
+
+        // Host changed
+        socketService.on('host_changed', (data: { newHostId: string }) => {
+            console.log('👑 New host:', data.newHostId);
+            // Room update will handle the UI update
+        });
+
         return () => {
             socketService.off('connected');
             socketService.off('room_created');
             socketService.off('room_update');
             socketService.off('player_joined');
             socketService.off('game_start');
+            socketService.off('player_left');
+            socketService.off('kicked');
+            socketService.off('host_changed');
         };
-    }, [onGameStart]);
+    }, [onGameStart, onBack]);
 
     const handleCopyCode = useCallback(() => {
         if (room?.roomCode) {
@@ -128,17 +155,61 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         socketService.emit('start_game', { roomId: room.id });
     };
 
-    // Determine if this user is host (either via prop or by checking player1)
-    const isActualHost = isHost || (myPlayerId && room?.player1?.odium === myPlayerId);
+    const handleLeaveLobby = () => {
+        setShowLeavePopup(true);
+    };
+
+    const handleBackPress = () => {
+        setShowLeavePopup(true);
+    };
+
+    const confirmLeave = () => {
+        setShowLeavePopup(false);
+        socketService.emit('leave_room', { roomId: room?.id });
+        onBack?.();
+    };
+
+    const cancelLeave = () => {
+        setShowLeavePopup(false);
+    };
+
+    const handleKickPlayer = () => {
+        if (!room?.id || !opponentPlayer?.odium) return;
+        socketService.emit('kick_player', { roomId: room.id, playerId: opponentPlayer.odium });
+    };
+
+    const handleTransferHost = () => {
+        if (!room?.id || !room?.player2?.odium) {
+            return;
+        }
+        socketService.emit('transfer_host', { roomId: room.id, newHostId: room.player2.odium });
+    };
+
+    // Handle Android hardware back button
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            setShowLeavePopup(true);
+            return true; // Prevent default back behavior
+        });
+
+        return () => backHandler.remove();
+    }, []);
+
+    // Determine if this user is host - DERIVE from room state
+    // Compare by playerId (odium) OR by socketId (from room data)
+    const mySocketId = socketService.getSocketId();
+    const player1Data = room?.player1 as any;
+    const amIPlayer1 = (myPlayerId && room?.player1?.odium === myPlayerId) ||
+        (mySocketId && player1Data?.socketId === mySocketId);
+    const isActualHost = amIPlayer1 ?? isHost; // fallback to prop if can't determine
 
     const hostPlayer = room?.player1;
     const opponentPlayer = room?.player2;
 
     // Simply: host can start when opponent card is visible
-    const canStartGame = isHost && !!opponentPlayer;
+    const canStartGame = isActualHost && !!opponentPlayer;
 
-    // Debug
-    console.log('🎮 canStartGame:', { isHost, hasOpponent: !!opponentPlayer, canStartGame });
+
 
     return (
         <View style={styles.container}>
@@ -147,7 +218,7 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                    <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
                         <Ionicons name="arrow-forward" size={24} color={COLORS.textPrimary} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>غرفة الانتظار</Text>
@@ -241,6 +312,20 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                                         </View>
                                     </View>
                                 </View>
+
+                                {/* Host Actions */}
+                                {isActualHost && (
+                                    <View style={styles.hostActions}>
+                                        <TouchableOpacity style={styles.transferButton} onPress={handleTransferHost}>
+                                            <Ionicons name="swap-horizontal" size={16} color={COLORS.primary} />
+                                            <Text style={styles.transferButtonText}>تسليم القيادة</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.kickButton} onPress={handleKickPlayer}>
+                                            <Ionicons name="close-circle" size={16} color={COLORS.error} />
+                                            <Text style={styles.kickButtonText}>طرد</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
                             </View>
                         ) : (
                             <View style={styles.waitingCard}>
@@ -291,11 +376,30 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                         )}
                     </TouchableOpacity>
 
+                    {/* Leave Lobby Button */}
+                    <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveLobby}>
+                        <Ionicons name="exit-outline" size={18} color={COLORS.error} />
+                        <Text style={styles.leaveButtonText}>مغادرة اللوبي</Text>
+                    </TouchableOpacity>
+
                     {!opponentPlayer && (
                         <Text style={styles.hintText}>لازم منافس ينضم عشان تبدأ اللعبة</Text>
                     )}
                 </View>
             </SafeAreaView>
+
+            {/* Leave Confirmation Popup */}
+            <ConfirmPopup
+                visible={showLeavePopup}
+                title="مغادرة اللوبي"
+                message="هل أنت متأكد من مغادرة اللوبي؟"
+                confirmText="مغادرة"
+                cancelText="إلغاء"
+                confirmDestructive
+                icon="exit-outline"
+                onConfirm={confirmLeave}
+                onCancel={cancelLeave}
+            />
         </View>
     );
 };
@@ -603,6 +707,57 @@ const styles = StyleSheet.create({
         color: COLORS.textSlate,
         textAlign: 'center',
         marginTop: SPACING.sm,
+    },
+    leaveButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        marginTop: SPACING.md,
+        paddingVertical: SPACING.sm,
+    },
+    leaveButtonText: {
+        fontSize: 14,
+        color: COLORS.error,
+        fontWeight: '600',
+    },
+    hostActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: SPACING.sm,
+        marginTop: SPACING.sm,
+        paddingTop: SPACING.sm,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.1)',
+    },
+    transferButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: BORDER_RADIUS.md,
+        backgroundColor: 'rgba(9, 170, 9, 0.1)',
+    },
+    transferButtonText: {
+        fontSize: 12,
+        color: COLORS.primary,
+        fontWeight: '600',
+    },
+    kickButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: BORDER_RADIUS.md,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    },
+    kickButtonText: {
+        fontSize: 12,
+        color: COLORS.error,
+        fontWeight: '600',
     },
 });
 
