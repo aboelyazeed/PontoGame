@@ -16,6 +16,7 @@ import {
     MainTabsScreen,
     GameModeScreen,
     OnlineRoomsScreen,
+    WaitingRoomScreen,
     GamePlayScreen,
     GameOverScreen,
 } from './src/screens';
@@ -34,7 +35,8 @@ type RootStackParamList = {
     MainTabs: undefined;
     GameMode: undefined;
     OnlineRooms: undefined;
-    GamePlay: undefined;
+    WaitingRoom: { isHost: boolean; roomData?: any };
+    GamePlay: { initialGameState?: any };
     GameOver: {
         winnerName: string;
         player1Name: string;
@@ -119,28 +121,32 @@ export default function App() {
                                     {({ navigation }) => (
                                         <OnlineRoomsScreen
                                             onBack={() => navigation.goBack()}
-                                            onJoinRoom={(roomId) => {
-                                                navigation.navigate('GamePlay');
+                                            onJoinRoom={(roomId, roomData) => {
+                                                navigation.navigate('WaitingRoom', { isHost: false, roomData });
                                             }}
-                                            onCreateRoom={(isPrivate) => {
-                                                // Should eventually navigate to waiting room
-                                                // For now, go to GamePlay as mock
-                                                navigation.navigate('GamePlay');
+                                            onCreateRoom={(roomData) => {
+                                                navigation.navigate('WaitingRoom', { isHost: true, roomData });
                                             }}
                                         />
                                     )}
                                 </Stack.Screen>
 
+                                <Stack.Screen name="WaitingRoom">
+                                    {({ navigation, route }) => (
+                                        <WaitingRoomScreen
+                                            isHost={route.params?.isHost ?? false}
+                                            initialRoomData={route.params?.roomData}
+                                            onBack={() => navigation.goBack()}
+                                            onGameStart={(gameState) => navigation.replace('GamePlay', { initialGameState: gameState })}
+                                        />
+                                    )}
+                                </Stack.Screen>
+
                                 <Stack.Screen name="GamePlay">
-                                    {({ navigation }) => (
+                                    {({ navigation, route }) => (
                                         <GamePlayScreen
                                             onBack={() => navigation.goBack()}
-                                            onEndTurn={() => {
-                                                // TODO: Handle end turn
-                                            }}
-                                            onAttack={() => {
-                                                // TODO: Handle attack
-                                            }}
+                                            initialGameState={route.params?.initialGameState}
                                         />
                                     )}
                                 </Stack.Screen>

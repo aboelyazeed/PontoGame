@@ -117,15 +117,21 @@ export function setupGameSocket(io: Server) {
             const room = gameService.joinRoom(roomId, entry, password);
 
             if (room) {
-                const roomId = `game:${room.id}`;
-                socket.join(roomId);
+                const roomSocketId = `game:${room.id}`;
+                socket.join(roomSocketId);
 
-                // Notify players
-                io.to(roomId).emit('game_start', room);
-                io.to(roomId).emit('turn_start', {
-                    playerId: room.currentTurn,
-                    timeLimit: room.turnTimeLimit
+                // Notify host that player joined (don't auto-start game)
+                io.to(roomSocketId).emit('player_joined', {
+                    player: {
+                        odium: entry.odium,
+                        displayName: entry.displayName,
+                        level: entry.level,
+                        rank: entry.rank,
+                    }
                 });
+
+                // Send room update to all in room
+                io.to(roomSocketId).emit('room_update', room);
 
                 // Update rooms list for everyone else
                 io.emit('rooms_list_update', gameService.getAvailableRooms());
@@ -150,21 +156,65 @@ export function setupGameSocket(io: Server) {
             const room = gameService.joinRoomByCode(roomCode, entry, password);
 
             if (room) {
-                const roomId = `game:${room.id}`;
-                socket.join(roomId);
+                const roomSocketId = `game:${room.id}`;
+                socket.join(roomSocketId);
 
-                // Notify players
-                io.to(roomId).emit('game_start', room);
-                io.to(roomId).emit('turn_start', {
-                    playerId: room.currentTurn,
-                    timeLimit: room.turnTimeLimit
+                // Notify host that player joined (don't auto-start game)
+                io.to(roomSocketId).emit('player_joined', {
+                    player: {
+                        odium: entry.odium,
+                        displayName: entry.displayName,
+                        level: entry.level,
+                        rank: entry.rank,
+                    }
                 });
+
+                // Send room update to all in room
+                io.to(roomSocketId).emit('room_update', room);
 
                 // Update rooms list for everyone else
                 io.emit('rooms_list_update', gameService.getAvailableRooms());
             } else {
                 socket.emit('error', { message: 'رمز الغرفة غير صحيح أو كلمة المرور خطأ', code: 'INVALID_ROOM_CODE' });
             }
+        });
+
+        // ========================================
+        // Manual Game Start (Host only)
+        // ========================================
+
+        socket.on('start_game', ({ roomId }) => {
+            console.log(`🎮 ${socket.username} starting game in room ${roomId}`);
+
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد غرفة', code: 'NO_ROOM' });
+                return;
+            }
+
+            // Only host can start
+            if (game.player1.odium !== socket.userId) {
+                socket.emit('error', { message: 'فقط المضيف يمكنه بدء اللعبة', code: 'NOT_HOST' });
+                return;
+            }
+
+            // Need both players
+            if (!game.player2) {
+                socket.emit('error', { message: 'في انتظار لاعب آخر', code: 'WAITING_PLAYER' });
+                return;
+            }
+
+            // Start the game
+            game.status = 'playing';
+            game.turnStartTime = Date.now();
+            game.turnNumber = 1;
+
+            const roomSocketId = `game:${game.id}`;
+            io.to(roomSocketId).emit('game_start', game);
+            io.to(roomSocketId).emit('turn_start', {
+                playerId: game.currentTurn,
+                timeLimit: game.turnTimeLimit,
+            });
         });
 
         // ========================================

@@ -32,6 +32,7 @@ export interface PlayerState {
     field: (GameCard | null)[];
     score: number;
     isReady: boolean;
+    movesRemaining: number; // Max 3 per turn (PRD)
 }
 
 // Game State
@@ -91,6 +92,7 @@ export interface ClientToServerEvents {
 
     // Game Actions
     ready: () => void;
+    start_game: (data: { roomId: string }) => void;
     play_card: (data: { cardId: string; slotIndex: number }) => void;
     attack: (data: { attackerSlotIndex: number; defenderSlotIndex: number }) => void;
     end_turn: () => void;

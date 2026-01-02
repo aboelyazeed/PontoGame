@@ -22,26 +22,127 @@ const roomCodes: Map<string, string> = new Map(); // roomCode -> gameId
 const playerToGame: Map<string, string> = new Map(); // odium -> gameId
 
 // ==========================================
-// Sample Cards (will be replaced by database)
+// Full Card Deck (PRD Compliant)
 // ==========================================
-const SAMPLE_CARDS: GameCard[] = [
-    // Attackers (Red cards)
-    { id: 'c1', type: 'player', name: 'Striker', nameAr: 'رأس حربة', position: 'FW', attack: 6, defense: 0, description: 'رأس حربة شرس، ينهي الهجمات بضربات مباشرة قوية.' },
-    { id: 'c2', type: 'player', name: 'Forward', nameAr: 'مهاجم', position: 'FW', attack: 4, defense: 0, description: 'مهاجم قناص، يمزق الشباك بضرباته القوية.' },
 
-    // Midfielders (Orange/Green cards)
-    { id: 'c3', type: 'player', name: 'Midfielder A', nameAr: 'لاعب وسط', position: 'MF', attack: 3, defense: 2, description: 'صانع ألعاب ماهر، يخترق الدفاعات ويصنع فرصاً خطيرة.' },
-    { id: 'c4', type: 'player', name: 'Midfielder B', nameAr: 'لاعب وسط', position: 'MF', attack: 2, defense: 3, description: 'تحكم بالوسط، يوزع اللعب ويساعد في الدفاع والهجوم ببراعة.' },
+// Helper to generate multiple cards
+function generateCards(count: number, template: Omit<GameCard, 'id'>): GameCard[] {
+    return Array.from({ length: count }, (_, i) => ({
+        ...template,
+        id: `${template.position || template.type}_${i + 1}`,
+    }));
+}
 
-    // Defenders (Blue cards)
-    { id: 'c5', type: 'player', name: 'Defender', nameAr: 'مدافع', position: 'DF', attack: 0, defense: 6, description: 'تصدّي قوي، يُوقف الهجمات ببراعة، درع صلب.' },
+// PLAYER CARDS
+const GOALKEEPER_CARDS: GameCard[] = generateCards(8, {
+    type: 'player',
+    name: 'Goalkeeper',
+    nameAr: 'حارس مرمى',
+    position: 'GK',
+    attack: 0,
+    defense: 8,
+    description: 'حارس مرمى متمكن، يصد أقوى الضربات.',
+    imageUrl: 'GK.png',
+});
 
-    // Action cards
-    { id: 'c6', type: 'action', name: 'Power Boost', nameAr: 'بطاقة قوة', description: '+2 لأي كارت في هذا الدور' },
+const DEFENDER_CARDS: GameCard[] = generateCards(8, {
+    type: 'player',
+    name: 'Defender',
+    nameAr: 'مدافع',
+    position: 'DF',
+    attack: 0,
+    defense: 6,
+    description: 'تصدّي قوي، يُوقف الهجمات ببراعة، درع صلب.',
+    imageUrl: 'DF.png',
+});
 
-    // Ponto cards
-    { id: 'c7', type: 'ponto', name: 'Ponto', nameAr: 'بونتو', description: 'كارت خاص' },
+const MIDFIELDER_DEF_CARDS: GameCard[] = generateCards(12, {
+    type: 'player',
+    name: 'Midfielder (Defensive)',
+    nameAr: 'لاعب وسط',
+    position: 'MF',
+    attack: 2,
+    defense: 3,
+    description: 'تحكم بالوسط، يوزع اللعب ويساعد في الدفاع والهجوم ببراعة.',
+    imageUrl: 'CDM.png',
+});
+
+const MIDFIELDER_ATK_CARDS: GameCard[] = generateCards(12, {
+    type: 'player',
+    name: 'Midfielder (Attacking)',
+    nameAr: 'لاعب وسط',
+    position: 'MF',
+    attack: 3,
+    defense: 2,
+    description: 'صانع ألعاب ماهر، يخترق الدفاعات ويصنع فرصاً خطيرة.',
+    imageUrl: 'CAM.png',
+});
+
+const FORWARD_CARDS: GameCard[] = generateCards(8, {
+    type: 'player',
+    name: 'Forward',
+    nameAr: 'مهاجم',
+    position: 'FW',
+    attack: 4,
+    defense: 0,
+    description: 'مهاجم قناص، يمزق الشباك بضرباته القوية.',
+    imageUrl: 'FW.png',
+});
+
+const STRIKER_CARDS: GameCard[] = generateCards(4, {
+    type: 'player',
+    name: 'Striker',
+    nameAr: 'رأس حربة',
+    position: 'FW',
+    attack: 6,
+    defense: 0,
+    description: 'رأس حربة شرس، ينهي الهجمات بضربات مباشرة قوية.',
+    imageUrl: 'ST.png',
+});
+
+// ACTION CARDS
+const ACTION_CARDS: GameCard[] = [
+    { id: 'act_swap_1', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)' },
+    { id: 'act_swap_2', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)' },
+    { id: 'act_shoulder_1', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع' },
+    { id: 'act_shoulder_2', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع' },
+    { id: 'act_var_1', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف' },
+    { id: 'act_var_2', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف' },
+    { id: 'act_mercato_1', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين' },
+    { id: 'act_mercato_2', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين' },
+    { id: 'act_biter_1', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك' },
+    { id: 'act_biter_2', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك' },
+    { id: 'act_red_1', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم' },
+    { id: 'act_red_2', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم' },
+    { id: 'act_yellow_1', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد' },
+    { id: 'act_yellow_2', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد' },
 ];
+
+// PONTO CARDS (5 of each value)
+const PONTO_CARDS: GameCard[] = [
+    ...generateCards(5, { type: 'ponto', name: 'Ponto +1', nameAr: 'بونطو +1', attack: 1 }),
+    ...generateCards(5, { type: 'ponto', name: 'Ponto +2', nameAr: 'بونطو +2', attack: 2 }),
+    ...generateCards(5, { type: 'ponto', name: 'Ponto +3', nameAr: 'بونطو +3', attack: 3 }),
+    ...generateCards(5, { type: 'ponto', name: 'Ponto +4', nameAr: 'بونطو +4', attack: 4 }),
+    ...generateCards(5, { type: 'ponto', name: 'Ponto +5', nameAr: 'بونطو +5', attack: 5 }),
+];
+
+// All player cards combined
+const PLAYER_CARDS: GameCard[] = [
+    ...GOALKEEPER_CARDS,
+    ...DEFENDER_CARDS,
+    ...MIDFIELDER_DEF_CARDS,
+    ...MIDFIELDER_ATK_CARDS,
+    ...FORWARD_CARDS,
+    ...STRIKER_CARDS,
+];
+
+// Full deck
+const FULL_DECK = {
+    players: PLAYER_CARDS,
+    actions: ACTION_CARDS,
+    pontos: PONTO_CARDS,
+};
 
 export class GameService {
     // ========================================
@@ -140,6 +241,7 @@ export class GameService {
             field: [null, null, null, null, null], // 5 slots
             score: 0,
             isReady: false,
+            movesRemaining: 3, // PRD: Max 3 moves per turn
         };
     }
 
@@ -417,13 +519,48 @@ export class GameService {
         return null;
     }
 
-    private dealCards(player: PlayerState) {
-        // Shuffle and deal 7 cards
-        const shuffled = [...SAMPLE_CARDS].sort(() => Math.random() - 0.5);
-        player.hand = shuffled.slice(0, 7).map(card => ({
-            ...card,
-            id: uuidv4(), // Give each instance a unique ID
-        }));
+    private dealCards(player: PlayerState): GameCard {
+        // Shuffle each deck separately
+        const shuffledPlayers = [...PLAYER_CARDS].sort(() => Math.random() - 0.5);
+        const shuffledActions = [...ACTION_CARDS].sort(() => Math.random() - 0.5);
+        const shuffledPontos = [...PONTO_CARDS].sort(() => Math.random() - 0.5);
+
+        // PRD: 5 random players on field (face-down to opponent)
+        for (let i = 0; i < 5; i++) {
+            const card = shuffledPlayers.pop();
+            if (card) {
+                player.field[i] = {
+                    ...card,
+                    id: uuidv4(),
+                };
+            }
+        }
+
+        // PRD: 2 player cards in hand
+        for (let i = 0; i < 2; i++) {
+            const card = shuffledPlayers.pop();
+            if (card) {
+                player.hand.push({
+                    ...card,
+                    id: uuidv4(),
+                });
+            }
+        }
+
+        // PRD: 3 action cards in hand
+        for (let i = 0; i < 3; i++) {
+            const card = shuffledActions.pop();
+            if (card) {
+                player.hand.push({
+                    ...card,
+                    id: uuidv4(),
+                });
+            }
+        }
+
+        // PRD: Draw 1 ponto card (used for turn order)
+        const pontoCard = shuffledPontos.pop();
+        return pontoCard ? { ...pontoCard, id: uuidv4() } : { id: uuidv4(), type: 'ponto', name: 'Ponto', nameAr: 'بونطو', attack: 1 };
     }
 }
 
