@@ -1108,6 +1108,7 @@ export class GameService {
                 player.field[i] = {
                     ...card,
                     id: uuidv4(),
+                    isRevealed: false, // Cards start face-down
                 };
             }
         }
