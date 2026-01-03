@@ -86,6 +86,9 @@ export interface GameState {
     isGoldenGoal?: boolean; // Sudden death mode
     winReason?: 'score' | 'timeout' | 'golden_goal' | 'surrender' | 'disconnect';
 
+    // Draw phase tracking - player must draw 2 cards at start of turn
+    drawsRemaining?: number; // How many cards left to draw (0-2)
+
     lastAction?: GameAction;
     winner?: string;
 }
@@ -130,6 +133,7 @@ export interface ClientToServerEvents {
     // Game Actions
     ready: () => void;
     start_game: (data: { roomId: string }) => void;
+    draw_from_deck: (data: { deckType: 'player' | 'action' }) => void;
     play_card: (data: { cardId: string; slotIndex: number }) => void;
     draw_cards: (data: { cardType: 'player' | 'action' | 'ponto'; count: number }) => void;
     attack: (data: { attackerSlotIndex: number; defenderSlotIndex: number }) => void;
@@ -189,6 +193,7 @@ export interface ServerToClientEvents {
     // Action Results
     card_played: (data: { playerId: string; card: GameCard; slotIndex: number }) => void;
     cards_drawn: (data: { cardType: 'player' | 'action' | 'ponto'; drawnCards: GameCard[] }) => void;
+    card_drawn: (data: { cardType: 'player' | 'action'; drawnCard: GameCard; drawsRemaining: number }) => void;
     attack_result: (data: {
         attackerId: string;
         defenderId: string;

@@ -298,6 +298,11 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         setState(prev => ({ ...prev, selectedCardId: null, selectedFromHand: false }));
     }, []);
 
+    // Draw Phase (mandatory at turn start - FREE) - tap decks to draw
+    const drawFromDeck = useCallback((deckType: 'player' | 'action') => {
+        socketService.emit('draw_from_deck', { deckType });
+    }, []);
+
     // Attack flow
     const enterAttackMode = useCallback((attackerSlotIndex: number) => {
         setState(prev => ({
@@ -380,5 +385,6 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         endTurn,
         surrender,
         clearGameEnd,
+        drawFromDeck,
     };
 };

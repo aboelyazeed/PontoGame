@@ -512,6 +512,32 @@ export function setupGameSocket(io: Server) {
             }
         });
 
+        // ========================================
+        // Draw Phase (mandatory at start of turn - FREE)
+        // ========================================
+
+        socket.on('draw_from_deck', ({ deckType }) => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.drawFromDeck(game, socket.userId!, deckType);
+
+            if (result.success) {
+                socket.emit('card_drawn', {
+                    cardType: deckType,
+                    drawnCard: result.drawnCard!,
+                    drawsRemaining: game.drawsRemaining || 0,
+                });
+
+                io.to(`game:${game.id}`).emit('game_update', game);
+            } else {
+                socket.emit('error', { message: result.message || 'خطأ في السحب', code: 'INVALID_DRAW' });
+            }
+        });
+
         // Draw cards from deck (costs 1 move)
         socket.on('draw_cards', ({ cardType, count }) => {
             const game = gameService.getGameByPlayer(socket.userId!);

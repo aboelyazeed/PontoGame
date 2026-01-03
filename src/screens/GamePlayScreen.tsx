@@ -112,6 +112,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         endTurn,
         surrender,
         clearGameEnd,
+        drawFromDeck,
     } = useGameLogic(myPlayerId, initialGameState);
 
     const [showMenu, setShowMenu] = useState(false);
@@ -213,6 +214,8 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     };
 
     const handleFieldCardPress = (card: GameCard | null, slotIndex: number, isOpponent: boolean) => {
+        // Block all interactions during draw phase
+        if (gameState?.turnPhase === 'draw') return;
         if (!isMyTurn && !isDefensePhase) return;
 
         // Handle Action Targeting
@@ -238,6 +241,8 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     };
 
     const handleEmptySlotPress = (slotIndex: number) => {
+        // Block during draw phase
+        if (gameState?.turnPhase === 'draw') return;
         if (!isMyTurn || attackMode) return;
         if (actionTargetMode !== 'none') return; // Don't allow playing to empty slots while targeting
 
@@ -250,6 +255,8 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     };
 
     const handleHandCardPress = (card: GameCard) => {
+        // Block during draw phase
+        if (gameState?.turnPhase === 'draw') return;
         if (!isMyTurn && !isDefensePhase) return;
 
         if (card.type === 'action') {
@@ -479,22 +486,42 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
 
                         {/* Left Side - Players + Action Decks */}
                         <View style={styles.deckSidebarLeft}>
+                            {/* Player Deck - visible during draw phase or when can draw */}
                             <TouchableOpacity
-                                style={styles.deckCard}
-                                onPress={() => drawCards('player', 2)}
-                                disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 1}
+                                style={[
+                                    styles.deckCard,
+                                    gameState?.turnPhase === 'draw' && isMyTurn && styles.deckCardActive
+                                ]}
+                                onPress={() => {
+                                    if (gameState?.turnPhase === 'draw') {
+                                        drawFromDeck('player');
+                                    } else {
+                                        drawCards('player', 1);
+                                    }
+                                }}
+                                disabled={!isMyTurn || (gameState?.turnPhase !== 'draw' && (myPlayer?.movesRemaining || 0) < 1)}
                             >
-                                <MaterialIcons name="group" size={20} color="rgba(255,255,255,0.4)" />
-                                <Text style={styles.deckLabel}>لاعبين</Text>
+                                <Ionicons name="people" size={20} color={gameState?.turnPhase === 'draw' && isMyTurn ? COLORS.primary : 'rgba(255,255,255,0.4)'} />
+                                <Text style={[styles.deckLabel, gameState?.turnPhase === 'draw' && isMyTurn && styles.deckLabelActive]}>لاعبين</Text>
                             </TouchableOpacity>
 
+                            {/* Action Deck */}
                             <TouchableOpacity
-                                style={styles.deckCard}
-                                onPress={() => drawCards('action', 1)}
-                                disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 1}
+                                style={[
+                                    styles.deckCard,
+                                    gameState?.turnPhase === 'draw' && isMyTurn && styles.deckCardActive
+                                ]}
+                                onPress={() => {
+                                    if (gameState?.turnPhase === 'draw') {
+                                        drawFromDeck('action');
+                                    } else {
+                                        drawCards('action', 1);
+                                    }
+                                }}
+                                disabled={!isMyTurn || (gameState?.turnPhase !== 'draw' && (myPlayer?.movesRemaining || 0) < 1)}
                             >
-                                <MaterialIcons name="flash-on" size={20} color="rgba(255,255,255,0.4)" />
-                                <Text style={styles.deckLabel}>أكشن</Text>
+                                <MaterialIcons name="flash-on" size={20} color={gameState?.turnPhase === 'draw' && isMyTurn ? COLORS.warning : 'rgba(255,255,255,0.4)'} />
+                                <Text style={[styles.deckLabel, gameState?.turnPhase === 'draw' && isMyTurn && styles.deckLabelActive]}>أكشن</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -571,23 +598,23 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                         ) : (
                             <>
                                 <TouchableOpacity
-                                    style={[styles.attackButton, (!isMyTurn || (myPlayer?.movesRemaining || 0) < 2) && styles.buttonDisabled]}
+                                    style={[styles.attackButton, (!isMyTurn || gameState?.turnPhase === 'draw' || (myPlayer?.movesRemaining || 0) < 2) && styles.buttonDisabled]}
                                     onPress={() => {
                                         if (selectedCardId && myPlayer) {
                                             const idx = myPlayer.field.findIndex(c => c?.id === selectedCardId);
                                             if (idx !== -1) enterAttackMode(idx);
                                         }
                                     }}
-                                    disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 2}
+                                    disabled={!isMyTurn || gameState?.turnPhase === 'draw' || (myPlayer?.movesRemaining || 0) < 2}
                                 >
                                     <MaterialCommunityIcons name="soccer" size={18} color="#FFF" />
                                     <Text style={styles.attackButtonText}>هجـــوم</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    style={[styles.endTurnButton, !isMyTurn && styles.buttonDisabled]}
+                                    style={[styles.endTurnButton, (!isMyTurn || gameState?.turnPhase === 'draw') && styles.buttonDisabled]}
                                     onPress={endTurn}
-                                    disabled={!isMyTurn}
+                                    disabled={!isMyTurn || gameState?.turnPhase === 'draw'}
                                 >
                                     <Text style={styles.endTurnText}>إنهاء</Text>
                                 </TouchableOpacity>
@@ -664,6 +691,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                     </View>
                 </View>
             </Modal>
+
 
             {/* Game End Modal */}
             <Modal visible={!!gameEndInfo} transparent animationType="fade">
@@ -883,6 +911,26 @@ const styles = StyleSheet.create({
         bottom: -14,
         fontSize: 8,
         color: COLORS.textSlate,
+        fontWeight: 'bold',
+    },
+    deckCardActive: {
+        borderColor: COLORS.primary,
+        borderWidth: 2,
+        backgroundColor: 'rgba(9, 170, 9, 0.2)',
+    },
+    deckLabelActive: {
+        color: COLORS.primary,
+    },
+    drawsRemainingBadge: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+        marginTop: 4,
+    },
+    drawsRemainingText: {
+        color: '#FFF',
+        fontSize: 10,
         fontWeight: 'bold',
     },
 
@@ -1308,6 +1356,61 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontWeight: 'bold',
         fontSize: 16,
+    },
+
+
+    // DRAW PHASE MODAL
+    drawPhaseModal: {
+        width: '90%',
+        backgroundColor: COLORS.surfaceDarker,
+        borderRadius: 20,
+        padding: 24,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+        gap: 16,
+    },
+    drawPhaseTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#FFF',
+        marginTop: 8,
+    },
+    drawPhaseSubtitle: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        marginBottom: 8,
+    },
+    drawOptionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.surfaceLighter,
+        borderRadius: 16,
+        padding: 16,
+        width: '100%',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        gap: 16,
+    },
+    drawOptionIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    drawOptionTextContainer: {
+        flex: 1,
+    },
+    drawOptionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#FFF',
+        marginBottom: 4,
+    },
+    drawOptionDesc: {
+        fontSize: 12,
+        color: COLORS.textSlate,
     },
 
 

@@ -269,12 +269,13 @@ export class GameService {
             id: gameId,
             status: 'starting',
             currentTurn: player1.odium, // Player 1 starts
-            turnPhase: 'play',
+            turnPhase: 'draw', // Player 1 must draw first (mandatory, free)
             turnNumber: 1,
             turnStartTime: Date.now(),
             turnTimeLimit: 90, // 90 seconds per turn (PRD: 1.5 min)
             matchStartTime: Date.now(),
             matchTimeLimit: 1200, // 20 minutes per PRD
+            drawsRemaining: 2, // Player 1 must draw 2 cards
 
             player1: this.createPlayerState(player1),
             player2: this.createPlayerState(player2),
@@ -1006,9 +1007,46 @@ export class GameService {
 
         gameState.turnNumber++;
         gameState.turnStartTime = Date.now();
-        gameState.turnPhase = 'play';
+
+        // Turn starts with mandatory draw phase (FREE - doesn't cost moves)
+        gameState.turnPhase = 'draw';
+        gameState.drawsRemaining = 2; // Must draw 2 cards
 
         return true;
+    }
+
+    /**
+     * Draw a single card from a deck (during draw phase)
+     * Player must draw 2 cards total, can mix player/action decks
+     */
+    drawFromDeck(
+        gameState: GameState,
+        odium: string,
+        deckType: 'player' | 'action'
+    ): { success: boolean; message?: string; drawnCard?: GameCard } {
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        if (gameState.turnPhase !== 'draw') return { success: false, message: 'لست في مرحلة السحب' };
+        if (!gameState.drawsRemaining || gameState.drawsRemaining <= 0) return { success: false, message: 'انتهيت من السحب' };
+
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return { success: false, message: 'لاعب غير موجود' };
+
+        const deck = deckType === 'player' ? PLAYER_CARDS : ACTION_CARDS;
+        const template = deck[Math.floor(Math.random() * deck.length)];
+        const drawnCard: GameCard = {
+            ...template,
+            id: uuidv4(),
+        };
+
+        player.hand.push(drawnCard);
+        gameState.drawsRemaining -= 1;
+
+        // If drew both cards, transition to play phase
+        if (gameState.drawsRemaining <= 0) {
+            gameState.turnPhase = 'play';
+        }
+
+        return { success: true, drawnCard };
     }
 
     // ========================================
