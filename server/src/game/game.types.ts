@@ -38,6 +38,7 @@ export interface PlayerState {
 // Game State
 export interface GameState {
     id: string;
+    roomName?: string;
     roomCode?: string;
     isPrivate?: boolean;
     hasPassword?: boolean;
@@ -84,7 +85,7 @@ export interface ClientToServerEvents {
     leave_queue: () => void;
 
     // Room Management
-    create_room: (data: { isPrivate: boolean; password?: string }) => void;
+    create_room: (data: { isPrivate: boolean; password?: string; roomName?: string }) => void;
     get_rooms: () => void;
     join_room: (data: { roomId: string; password?: string }) => void;
     join_room_by_code: (data: { roomCode: string; password?: string }) => void;

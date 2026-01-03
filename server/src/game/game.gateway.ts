@@ -80,8 +80,8 @@ export function setupGameSocket(io: Server) {
         // Room Events
         // ========================================
 
-        socket.on('create_room', async ({ isPrivate, password }) => {
-            console.log(`🏠 ${socket.username} creating room (Private: ${isPrivate}, HasPassword: ${!!password})`);
+        socket.on('create_room', async ({ isPrivate, password, roomName }) => {
+            console.log(`🏠 ${socket.username} creating room (Private: ${isPrivate}, HasPassword: ${!!password}, Name: ${roomName || 'None'})`);
 
             const entry: QueueEntry = {
                 odium: socket.userId!,
@@ -93,7 +93,7 @@ export function setupGameSocket(io: Server) {
                 joinedAt: Date.now(),
             };
 
-            const room = await gameService.createRoom(entry, isPrivate, password);
+            const room = await gameService.createRoom(entry, isPrivate, password, roomName);
             socket.join(`game:${room.id}`);
 
             // Notify creator with both events for reliability

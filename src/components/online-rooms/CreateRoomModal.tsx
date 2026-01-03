@@ -24,6 +24,8 @@ interface CreateRoomModalProps {
     setIsPrivate: (value: boolean) => void;
     password: string;
     setPassword: (value: string) => void;
+    roomName: string;
+    setRoomName: (value: string) => void;
 }
 
 export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
@@ -33,7 +35,9 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     isPrivate,
     setIsPrivate,
     password,
-    setPassword
+    setPassword,
+    roomName,
+    setRoomName
 }) => {
     const slideAnim = useRef(new Animated.Value(0)).current;
     const [layoutWidth, setLayoutWidth] = useState(0);
@@ -71,6 +75,19 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
                     <View style={styles.modalIndicator} />
                     <Text style={styles.modalTitle}>إنشاء غرفة جديدة</Text>
                     <Text style={styles.modalSubtitle}>حدد إعدادات الغرفة الخاصة بك</Text>
+
+                    {/* Room Name Input */}
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.inputLabel}>اسم الغرفة</Text>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="أدخل اسم الغرفة"
+                            placeholderTextColor={COLORS.textSecondary + '80'}
+                            value={roomName}
+                            onChangeText={setRoomName}
+                            maxLength={30}
+                        />
+                    </View>
 
                     <View
                         style={styles.toggleContainer}
@@ -216,6 +233,21 @@ const styles = StyleSheet.create({
     },
     toggleTextActive: {
         color: '#FFF',
+    },
+    inputContainer: {
+        width: '100%',
+        marginBottom: SPACING.lg,
+    },
+    textInput: {
+        width: '100%',
+        height: 50,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.cardBorder,
+        paddingHorizontal: SPACING.md,
+        color: COLORS.textPrimary,
+        textAlign: 'left',
     },
     passwordContainer: {
         width: '100%',

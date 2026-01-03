@@ -54,6 +54,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
     const [createModalVisible, setCreateModalVisible] = useState(false);
     const [isPrivateRoom, setIsPrivateRoom] = useState(false);
     const [roomPassword, setRoomPassword] = useState('');
+    const [roomName, setRoomName] = useState('');
 
     // Password Modal State
     const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
@@ -76,6 +77,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
                 id: room.id,
                 isPrivate: room.isPrivate,
                 hasPassword: room.hasPassword,
+                roomName: room.roomName,
                 roomCode: room.roomCode,
                 players: room.player2 ? 2 : 1,
                 maxPlayers: 2,
@@ -164,7 +166,8 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
 
         socketService.emit('create_room', {
             isPrivate: isPrivateRoom,
-            password: roomPassword || undefined
+            password: roomPassword || undefined,
+            roomName: roomName.trim() || undefined
         });
     };
 
@@ -255,6 +258,8 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
                     setIsPrivate={setIsPrivateRoom}
                     password={roomPassword}
                     setPassword={setRoomPassword}
+                    roomName={roomName}
+                    setRoomName={setRoomName}
                 />
 
                 <JoinRoomModal

@@ -29,7 +29,7 @@ export const RoomCard: React.FC<RoomCardProps> = ({ item, onJoin }) => {
                 </View>
                 <View>
                     <Text style={styles.roomTitle}>
-                        {item.roomCode ? `غرفة ${item.roomCode}` : 'غرفة تحدي'}
+                        {item.roomName || 'غرفة تحدي'}
                     </Text>
                     <View style={styles.roomMetaRow}>
                         <View style={styles.tagContainer}>

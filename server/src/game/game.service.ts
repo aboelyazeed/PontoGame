@@ -249,7 +249,7 @@ export class GameService {
     // Room Management (New)
     // ========================================
 
-    async createRoom(host: QueueEntry, isPrivate: boolean = false, password?: string): Promise<GameState> {
+    async createRoom(host: QueueEntry, isPrivate: boolean = false, password?: string, roomName?: string): Promise<GameState> {
         // Remove from queue if in it
         this.removeFromQueue(host.odium);
 
@@ -259,6 +259,7 @@ export class GameService {
         // Create initial game state (Waiting room)
         const gameState: GameState = {
             id: gameId,
+            roomName: roomName || `غرفة ${host.displayName}`,
             roomCode,
             status: 'waiting',
             currentTurn: host.odium,

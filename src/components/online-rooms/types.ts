@@ -2,6 +2,7 @@ export interface Room {
     id: string;
     isPrivate: boolean;
     hasPassword?: boolean;
+    roomName?: string;
     roomCode?: string;
     players: number;
     maxPlayers: number;
