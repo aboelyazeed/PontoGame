@@ -102,20 +102,20 @@ const STRIKER_CARDS: GameCard[] = generateCards(4, {
 
 // ACTION CARDS
 const ACTION_CARDS: GameCard[] = [
-    { id: 'act_swap_1', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)' },
-    { id: 'act_swap_2', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)' },
-    { id: 'act_shoulder_1', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع' },
-    { id: 'act_shoulder_2', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع' },
-    { id: 'act_var_1', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف' },
-    { id: 'act_var_2', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف' },
-    { id: 'act_mercato_1', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين' },
-    { id: 'act_mercato_2', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين' },
-    { id: 'act_biter_1', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك' },
-    { id: 'act_biter_2', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك' },
-    { id: 'act_red_1', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم' },
-    { id: 'act_red_2', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم' },
-    { id: 'act_yellow_1', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد' },
-    { id: 'act_yellow_2', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد' },
+    { id: 'act_swap_1', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)', actionEffect: 'swap' },
+    { id: 'act_swap_2', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)', actionEffect: 'swap' },
+    { id: 'act_shoulder_1', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع', actionEffect: 'shoulder' },
+    { id: 'act_shoulder_2', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع', actionEffect: 'shoulder' },
+    { id: 'act_var_1', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف', actionEffect: 'var' },
+    { id: 'act_var_2', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف', actionEffect: 'var' },
+    { id: 'act_mercato_1', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين', actionEffect: 'mercato' },
+    { id: 'act_mercato_2', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين', actionEffect: 'mercato' },
+    { id: 'act_biter_1', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك', actionEffect: 'biter' },
+    { id: 'act_biter_2', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك', actionEffect: 'biter' },
+    { id: 'act_red_1', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم', actionEffect: 'red_card' },
+    { id: 'act_red_2', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم', actionEffect: 'red_card' },
+    { id: 'act_yellow_1', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد', actionEffect: 'yellow_card' },
+    { id: 'act_yellow_2', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد', actionEffect: 'yellow_card' },
 ];
 
 // PONTO CARDS (5 of each value)
@@ -127,7 +127,83 @@ const PONTO_CARDS: GameCard[] = [
     ...generateCards(5, { type: 'ponto', name: 'Ponto +5', nameAr: 'بونطو +5', attack: 5 }),
 ];
 
-// All player cards combined
+// LEGENDARY PLAYER CARDS (PRD Section 9) - 1 of each
+const LEGENDARY_CARDS: GameCard[] = [
+    {
+        id: 'leg_ronaldo',
+        type: 'player',
+        name: 'Ronaldo - El Duzen',
+        nameAr: 'رونالدو – الدووزن',
+        position: 'FW',
+        attack: 8,
+        defense: 0,
+        description: 'إلغاء أي أحكام/تأثيرات للخصم',
+        isLegendary: true,
+        legendaryAbility: 'ronaldo',
+    },
+    {
+        id: 'leg_iniesta',
+        type: 'player',
+        name: 'Iniesta - The Artist',
+        nameAr: 'إنيستا – الرسام',
+        position: 'MF',
+        attack: 6,
+        defense: 6,
+        description: 'بعد الاستخدام يمكن قلبه واستخدامه مرة ثانية فقط',
+        isLegendary: true,
+        legendaryAbility: 'iniesta',
+    },
+    {
+        id: 'leg_shehata',
+        type: 'player',
+        name: 'Shehata - Abu Kaff',
+        nameAr: 'شحاتة أبو كف',
+        position: 'MF',
+        attack: 4,
+        defense: 2,
+        description: 'سحب 2 بونطو في الهجوم أو 2 Special دفاعي',
+        isLegendary: true,
+        legendaryAbility: 'shehata',
+    },
+    {
+        id: 'leg_modric',
+        type: 'player',
+        name: 'Modric - The Maestro',
+        nameAr: 'مودريتش – المايسترو',
+        position: 'MF',
+        attack: 6,
+        defense: 6,
+        description: '+1 Attack & Defense لكل لاعبيك طالما في الملعب',
+        isLegendary: true,
+        legendaryAbility: 'modric',
+    },
+    {
+        id: 'leg_messi',
+        type: 'player',
+        name: 'Messi - The Goat',
+        nameAr: 'ميسي – المعزة',
+        position: 'FW',
+        attack: 8,
+        defense: 0,
+        description: 'إلغاء أي تكتيكات للخصم عند لعبه',
+        isLegendary: true,
+        legendaryAbility: 'messi',
+    },
+    {
+        id: 'leg_yashin',
+        type: 'player',
+        name: 'Lev Yashin - Abu Yaseen',
+        nameAr: 'ليف ياشين – أبو ياسين',
+        position: 'GK',
+        attack: 0,
+        defense: 9,
+        description: 'إزالة نقاط كارت البونطو أثناء الدفاع',
+        isLegendary: true,
+        legendaryAbility: 'yashin',
+    },
+];
+
+// All player cards combined (non-legendary for field setup)
 const PLAYER_CARDS: GameCard[] = [
     ...GOALKEEPER_CARDS,
     ...DEFENDER_CARDS,
@@ -140,6 +216,7 @@ const PLAYER_CARDS: GameCard[] = [
 // Full deck
 const FULL_DECK = {
     players: PLAYER_CARDS,
+    legendaryPlayers: LEGENDARY_CARDS,
     actions: ACTION_CARDS,
     pontos: PONTO_CARDS,
 };
@@ -195,7 +272,9 @@ export class GameService {
             turnPhase: 'play',
             turnNumber: 1,
             turnStartTime: Date.now(),
-            turnTimeLimit: 60, // 60 seconds per turn
+            turnTimeLimit: 90, // 90 seconds per turn (PRD: 1.5 min)
+            matchStartTime: Date.now(),
+            matchTimeLimit: 1200, // 20 minutes per PRD
 
             player1: this.createPlayerState(player1),
             player2: this.createPlayerState(player2),
@@ -266,7 +345,8 @@ export class GameService {
             turnPhase: 'play',
             turnNumber: 0,
             turnStartTime: 0,
-            turnTimeLimit: 60,
+            turnTimeLimit: 90,
+            matchTimeLimit: 1200, // 20 minutes per PRD
 
             player1: this.createPlayerState(host),
             player2: null, // Waiting for second player
@@ -275,7 +355,7 @@ export class GameService {
             isPrivate,
             hasPassword: !!password,
             password,
-        } as any; // Cast to GameState (we might need to extend GameState type)
+        };
 
         // Store room
         activeRooms.set(gameId, gameState);
@@ -447,6 +527,9 @@ export class GameService {
         // Check if it's player's turn
         if (gameState.currentTurn !== odium) return false;
 
+        // Check if player has moves remaining (costs 1 move)
+        if (player.movesRemaining < 1) return false;
+
         // Check if slot is empty
         if (player.field[slotIndex] !== null) return false;
 
@@ -454,64 +537,415 @@ export class GameService {
         const cardIndex = player.hand.findIndex(c => c.id === cardId);
         if (cardIndex === -1) return false;
 
-        // Move card to field
+        // Move card to field (face-down by default)
         const card = player.hand.splice(cardIndex, 1)[0];
+        card.isRevealed = false; // Cards placed face-down
         player.field[slotIndex] = card;
+
+        // Deduct move
+        player.movesRemaining -= 1;
 
         return true;
     }
 
-    attack(
+    /**
+     * Flip a face-down card on your field to reveal it (costs 1 move)
+     */
+    flipCard(gameState: GameState, odium: string, slotIndex: number): boolean {
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return false;
+        if (gameState.currentTurn !== odium) return false;
+        if (player.movesRemaining < 1) return false;
+
+        const card = player.field[slotIndex];
+        if (!card) return false;
+        if (card.isRevealed) return false; // Already revealed
+
+        card.isRevealed = true;
+        player.movesRemaining -= 1;
+
+        return true;
+    }
+
+    /**
+     * Swap a card from hand with a card on field (costs 1 move)
+     * PRD: "تبديل لاعب من اليد بلاعب من الملعب"
+     */
+    swapCards(gameState: GameState, odium: string, handCardId: string, fieldSlotIndex: number): boolean {
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return false;
+        if (gameState.currentTurn !== odium) return false;
+        if (player.movesRemaining < 1) return false;
+
+        // Find card in hand
+        const handCardIndex = player.hand.findIndex(c => c.id === handCardId);
+        if (handCardIndex === -1) return false;
+
+        // Get field card (can be null for empty slot, but swap requires card)
+        const fieldCard = player.field[fieldSlotIndex];
+        if (!fieldCard) return false; // Must swap with existing card
+
+        // Swap
+        const handCard = player.hand[handCardIndex];
+        handCard.isRevealed = false; // Placed face-down
+        player.field[fieldSlotIndex] = handCard;
+        player.hand[handCardIndex] = fieldCard;
+
+        player.movesRemaining -= 1;
+
+        return true;
+    }
+
+    /**
+     * Summon a legendary player (costs 1 move + discard 2 cards from hand)
+     * PRD: "إنزال لاعب أسطوري (مع التخلص من كارتين)"
+     */
+    summonLegendary(
+        gameState: GameState,
+        odium: string,
+        legendaryCardId: string,
+        discardCardIds: [string, string],
+        fieldSlotIndex: number
+    ): { success: boolean; message?: string } {
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return { success: false, message: 'لاعب غير موجود' };
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
+
+        // Find legendary card in hand
+        const legendaryIndex = player.hand.findIndex(c => c.id === legendaryCardId);
+        if (legendaryIndex === -1) return { success: false, message: 'الكارت الأسطوري غير موجود' };
+
+        const legendaryCard = player.hand[legendaryIndex];
+        if (!legendaryCard.isLegendary) return { success: false, message: 'ليس كارت أسطوري' };
+
+        // Find cards to discard (must be 2 different cards, not the legendary)
+        const discardIndices: number[] = [];
+        for (const discardId of discardCardIds) {
+            if (discardId === legendaryCardId) {
+                return { success: false, message: 'لا يمكن التخلص من الكارت الأسطوري' };
+            }
+            const idx = player.hand.findIndex((c, i) => c.id === discardId && !discardIndices.includes(i));
+            if (idx === -1) return { success: false, message: 'كروت التخلص غير موجودة' };
+            discardIndices.push(idx);
+        }
+
+        if (discardIndices.length < 2) return { success: false, message: 'يجب التخلص من كارتين' };
+
+        // Check field slot
+        if (player.field[fieldSlotIndex] !== null) {
+            return { success: false, message: 'المكان مشغول' };
+        }
+
+        // Remove discard cards (in reverse order to maintain indices)
+        discardIndices.sort((a, b) => b - a);
+        for (const idx of discardIndices) {
+            player.hand.splice(idx, 1);
+        }
+
+        // Remove legendary from hand and place on field
+        const newLegIndex = player.hand.findIndex(c => c.id === legendaryCardId);
+        const legend = player.hand.splice(newLegIndex, 1)[0];
+        legend.isRevealed = true; // Legends are played face-up
+        player.field[fieldSlotIndex] = legend;
+
+        player.movesRemaining -= 1;
+
+        return { success: true };
+    }
+
+    /**
+     * Use an action card from hand (costs 1 move)
+     * Each action card has a different effect
+     */
+    useActionCard(
+        gameState: GameState,
+        odium: string,
+        cardId: string,
+        targetData?: {
+            slotIndex1?: number;      // For swap, biter, yellow
+            slotIndex2?: number;      // For swap (second card)
+            isOpponentSlot1?: boolean; // For swap, red, yellow
+            isOpponentSlot2?: boolean; // For swap
+        }
+    ): { success: boolean; message?: string; drawnCards?: GameCard[]; varResult?: number } {
+        const player = this.getPlayer(gameState, odium);
+        const opponent = this.getOpponent(gameState, odium);
+        if (!player || !opponent) return { success: false, message: 'لاعب غير موجود' };
+        if (gameState.currentTurn !== odium && gameState.turnPhase !== 'defense') {
+            return { success: false, message: 'ليس دورك' };
+        }
+        if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
+
+        // Find action card in hand
+        const cardIndex = player.hand.findIndex(c => c.id === cardId);
+        if (cardIndex === -1) return { success: false, message: 'الكارت غير موجود' };
+
+        const card = player.hand[cardIndex];
+        if (card.type !== 'action') return { success: false, message: 'ليس كارت أكشن' };
+
+        const effect = card.actionEffect;
+        let drawnCards: GameCard[] = [];
+        let varResult: number | undefined;
+
+        switch (effect) {
+            case 'shoulder': // كتف قانوني: +2 Defense during defense
+                if (gameState.turnPhase !== 'defense' || !gameState.pendingAttack) {
+                    return { success: false, message: 'يستخدم فقط في الدفاع' };
+                }
+                gameState.pendingAttack.defenseSum += 2;
+                gameState.pendingAttack.defenderMovesRemaining -= 1;
+                break;
+
+            case 'mercato': // ميركاتو: Draw 2 player cards
+                const playerCards = PLAYER_CARDS.slice();
+                for (let i = 0; i < 2 && playerCards.length > 0; i++) {
+                    const idx = Math.floor(Math.random() * playerCards.length);
+                    const drawn = { ...playerCards.splice(idx, 1)[0] };
+                    drawn.id = `${drawn.id}_drawn_${Date.now()}_${i}`;
+                    player.hand.push(drawn);
+                    drawnCards.push(drawn);
+                }
+                break;
+
+            case 'biter': // العضاض: +4 Attack, then eject your card
+                // Used during attack phase - boost attack sum
+                if (gameState.pendingAttack) {
+                    gameState.pendingAttack.attackSum += 4;
+                }
+                // Eject own card from specified slot
+                if (targetData?.slotIndex1 !== undefined) {
+                    player.field[targetData.slotIndex1] = null;
+                }
+                break;
+
+            case 'red_card': // كارت أحمر: Eject opponent's FW
+                if (targetData?.slotIndex1 !== undefined) {
+                    const targetCard = opponent.field[targetData.slotIndex1];
+                    if (targetCard && targetCard.position === 'FW') {
+                        opponent.field[targetData.slotIndex1] = null;
+                    } else {
+                        return { success: false, message: 'يجب اختيار مهاجم' };
+                    }
+                } else {
+                    return { success: false, message: 'يجب تحديد الهدف' };
+                }
+                break;
+
+            case 'yellow_card': // كارت أصفر: -2 Attack, 2 yellows = eject
+                if (targetData?.slotIndex1 !== undefined) {
+                    const targetPlayer = targetData.isOpponentSlot1 ? opponent : player;
+                    const targetCard = targetPlayer.field[targetData.slotIndex1];
+                    if (targetCard) {
+                        targetCard.attack = Math.max(0, (targetCard.attack || 0) - 2);
+                        targetCard.yellowCards = (targetCard.yellowCards || 0) + 1;
+                        if (targetCard.yellowCards >= 2) {
+                            targetPlayer.field[targetData.slotIndex1] = null; // Ejected
+                        }
+                    }
+                } else {
+                    return { success: false, message: 'يجب تحديد الهدف' };
+                }
+                break;
+
+            case 'var': // VAR: Draw ponto, ≥4 cancels attack, <4 = goal
+                if (gameState.turnPhase !== 'defense' || !gameState.pendingAttack) {
+                    return { success: false, message: 'يستخدم فقط في الدفاع' };
+                }
+                // Draw random Ponto value (1-5)
+                varResult = Math.ceil(Math.random() * 5);
+                if (varResult >= 4) {
+                    // Cancel the attack
+                    gameState.pendingAttack.attackSum = 0; // Nullify attack
+                } else {
+                    // Attack succeeds with extra damage
+                    gameState.pendingAttack.defenseSum = 0; // Defense fails
+                }
+                break;
+
+            case 'swap': // قصب بقصب: Swap any 2 cards
+                if (targetData?.slotIndex1 === undefined || targetData?.slotIndex2 === undefined) {
+                    return { success: false, message: 'يجب تحديد كارتين' };
+                }
+                const player1 = targetData.isOpponentSlot1 ? opponent : player;
+                const player2 = targetData.isOpponentSlot2 ? opponent : player;
+                const card1 = player1.field[targetData.slotIndex1];
+                const card2 = player2.field[targetData.slotIndex2];
+                if (!card1 || !card2) return { success: false, message: 'لا يوجد كروت' };
+                player1.field[targetData.slotIndex1] = card2;
+                player2.field[targetData.slotIndex2] = card1;
+                break;
+
+            default:
+                return { success: false, message: 'تأثير غير معروف' };
+        }
+
+        // Remove card from hand
+        player.hand.splice(cardIndex, 1);
+
+        // Deduct move (except shoulder which uses defense moves)
+        if (effect !== 'shoulder') {
+            player.movesRemaining -= 1;
+        }
+
+        return { success: true, drawnCards, varResult };
+    }
+
+    /**
+     * Declare attack - costs 2 moves, sets up pending attack and switches to defense phase
+     * Defender then gets 3 moves to respond before resolution
+     */
+    declareAttack(
         gameState: GameState,
         attackerOdium: string,
         attackerSlotIndex: number,
         defenderSlotIndex: number
-    ): { success: boolean; result?: 'win' | 'lose' | 'draw'; damage?: number } {
+    ): { success: boolean; message?: string } {
         const attacker = this.getPlayer(gameState, attackerOdium);
         const defender = this.getOpponent(gameState, attackerOdium);
 
+        if (!attacker || !defender) return { success: false, message: 'Invalid players' };
+        if (gameState.currentTurn !== attackerOdium) return { success: false, message: 'Not your turn' };
+        if (gameState.turnPhase === 'defense') return { success: false, message: 'Already in defense phase' };
+
+        // Attack costs 2 moves per PRD
+        if (attacker.movesRemaining < 2) return { success: false, message: 'Not enough moves (need 2)' };
+
+        const attackerCard = attacker.field[attackerSlotIndex];
+        if (!attackerCard) return { success: false, message: 'No attacker card in slot' };
+
+        // Get initial defense value
+        const defenderCard = defender.field[defenderSlotIndex];
+        const baseDefense = defenderCard?.defense || 0;
+
+        // Set up pending attack
+        gameState.pendingAttack = {
+            attackerId: attackerOdium,
+            attackerSlotIndex,
+            defenderSlotIndex,
+            attackSum: attackerCard.attack || 0,
+            defenseSum: baseDefense,
+            defenderMovesRemaining: 3, // Defender gets 3 defensive moves
+        };
+
+        // Deduct 2 moves from attacker
+        attacker.movesRemaining -= 2;
+
+        // Switch to defense phase - turn goes to defender
+        gameState.turnPhase = 'defense';
+        gameState.currentTurn = defender.odium;
+        gameState.turnStartTime = Date.now();
+
+        return { success: true };
+    }
+
+    /**
+     * Defender uses a defense move (play action card to boost defense, etc.)
+     * Costs 1 move from defender's 3 defense moves
+     */
+    useDefenseMove(
+        gameState: GameState,
+        defenderOdium: string,
+        defenseBonus: number = 0
+    ): { success: boolean; message?: string } {
+        if (!gameState.pendingAttack) return { success: false, message: 'No pending attack' };
+        if (gameState.turnPhase !== 'defense') return { success: false, message: 'Not in defense phase' };
+        if (gameState.currentTurn !== defenderOdium) return { success: false, message: 'Not your turn to defend' };
+        if (gameState.pendingAttack.defenderMovesRemaining <= 0) return { success: false, message: 'No defense moves left' };
+
+        // Add defense bonus (from action cards like كتف قانوني)
+        gameState.pendingAttack.defenseSum += defenseBonus;
+        gameState.pendingAttack.defenderMovesRemaining -= 1;
+
+        return { success: true };
+    }
+
+    /**
+     * End defense phase and resolve the attack
+     * Called when defender ends defense or runs out of moves
+     */
+    resolveAttack(
+        gameState: GameState
+    ): { success: boolean; result?: 'goal' | 'blocked' | 'draw'; damage?: number } {
+        if (!gameState.pendingAttack) return { success: false };
+
+        const { attackerId, attackerSlotIndex, defenderSlotIndex, attackSum, defenseSum } = gameState.pendingAttack;
+
+        const attacker = this.getPlayer(gameState, attackerId);
+        const defender = this.getOpponent(gameState, attackerId);
+
         if (!attacker || !defender) return { success: false };
-        if (gameState.currentTurn !== attackerOdium) return { success: false };
 
         const attackerCard = attacker.field[attackerSlotIndex];
         const defenderCard = defender.field[defenderSlotIndex];
 
-        if (!attackerCard) return { success: false };
-
-        const attackValue = attackerCard.attack || 0;
-        let defenseValue = 0;
-
-        if (defenderCard) {
-            defenseValue = defenderCard.defense || 0;
-        }
-
-        // Calculate result
-        let result: 'win' | 'lose' | 'draw';
+        let result: 'goal' | 'blocked' | 'draw';
         let damage = 0;
 
-        if (attackValue > defenseValue) {
-            result = 'win';
-            damage = attackValue - defenseValue;
+        if (attackSum > defenseSum) {
+            result = 'goal';
+            damage = attackSum - defenseSum;
             attacker.score += damage;
 
             // Remove defender card if it exists
             if (defenderCard) {
                 defender.field[defenderSlotIndex] = null;
             }
-        } else if (attackValue < defenseValue) {
-            result = 'lose';
-            // Attacker card is removed
-            attacker.field[attackerSlotIndex] = null;
+        } else if (attackSum < defenseSum) {
+            result = 'blocked';
+            // Attacker card removed
+            if (attackerCard) {
+                attacker.field[attackerSlotIndex] = null;
+            }
         } else {
             result = 'draw';
-            // Both cards removed
-            attacker.field[attackerSlotIndex] = null;
+            // Both removed
+            if (attackerCard) {
+                attacker.field[attackerSlotIndex] = null;
+            }
             if (defenderCard) {
                 defender.field[defenderSlotIndex] = null;
             }
         }
 
+        // Clear pending attack
+        gameState.pendingAttack = undefined;
+
+        // Return turn to attacker (their turn continues if they have moves)
+        gameState.currentTurn = attackerId;
+        gameState.turnPhase = 'play';
+
         return { success: true, result, damage };
+    }
+
+    /**
+     * Legacy attack function - resolves immediately (for backward compatibility)
+     * TODO: Remove once defense phase is fully implemented
+     */
+    attack(
+        gameState: GameState,
+        attackerOdium: string,
+        attackerSlotIndex: number,
+        defenderSlotIndex: number
+    ): { success: boolean; result?: 'win' | 'lose' | 'draw'; damage?: number } {
+        // Use new declare + resolve flow
+        const declareResult = this.declareAttack(gameState, attackerOdium, attackerSlotIndex, defenderSlotIndex);
+        if (!declareResult.success) return { success: false };
+
+        // Immediately resolve (no defense phase for now)
+        const resolveResult = this.resolveAttack(gameState);
+
+        // Map new result types to old
+        let legacyResult: 'win' | 'lose' | 'draw' | undefined;
+        if (resolveResult.result === 'goal') legacyResult = 'win';
+        else if (resolveResult.result === 'blocked') legacyResult = 'lose';
+        else if (resolveResult.result === 'draw') legacyResult = 'draw';
+
+        return {
+            success: resolveResult.success,
+            result: legacyResult,
+            damage: resolveResult.damage
+        };
     }
 
     endTurn(gameState: GameState, odium: string): boolean {
@@ -519,9 +953,12 @@ export class GameService {
 
         // Switch turn
         const isPlayer1 = gameState.player1.odium === odium;
-        gameState.currentTurn = isPlayer1
-            ? gameState.player2!.odium
-            : gameState.player1.odium;
+        const nextPlayer = isPlayer1 ? gameState.player2! : gameState.player1;
+
+        gameState.currentTurn = nextPlayer.odium;
+
+        // Reset next player's moves to 3
+        nextPlayer.movesRemaining = 3;
 
         gameState.turnNumber++;
         gameState.turnStartTime = Date.now();

@@ -5,6 +5,16 @@
 // Card Types
 export type CardPosition = 'FW' | 'MF' | 'DF' | 'GK';
 export type CardType = 'player' | 'action' | 'ponto';
+export type ActionEffect = 'swap' | 'shoulder' | 'var' | 'mercato' | 'biter' | 'red_card' | 'yellow_card';
+
+// Legendary Abilities (PRD Section 9)
+export type LegendaryAbility =
+    | 'ronaldo'   // الدووزن - إلغاء أي أحكام/تأثيرات للخصم
+    | 'iniesta'   // الرسام - يمكن قلبه واستخدامه مرة ثانية
+    | 'shehata'   // أبو كف - سحب 2 بونطو أو 2 Action
+    | 'modric'    // المايسترو - +1 ATK/DEF لكل لاعبيك
+    | 'messi'     // المعزة - إلغاء أي تكتيكات للخصم
+    | 'yashin';   // أبو ياسين - إزالة نقاط البونطو
 
 export interface GameCard {
     id: string;
@@ -16,6 +26,13 @@ export interface GameCard {
     defense?: number;
     description?: string;
     imageUrl?: string;
+    isRevealed?: boolean;
+    actionEffect?: ActionEffect;
+    yellowCards?: number;
+    // Legendary fields
+    isLegendary?: boolean;
+    legendaryAbility?: LegendaryAbility;
+    usedAbility?: boolean; // For Iniesta's one-time reuse
 }
 
 // Player State
@@ -45,13 +62,29 @@ export interface GameState {
     password?: string; // Internal use only
     status: 'waiting' | 'starting' | 'playing' | 'finished';
     currentTurn: string; // odium of player whose turn it is
-    turnPhase: 'draw' | 'play' | 'attack' | 'end';
+    turnPhase: 'draw' | 'play' | 'attack' | 'defense' | 'end';
     turnNumber: number;
     turnStartTime: number;
     turnTimeLimit: number; // in seconds
 
     player1: PlayerState;
     player2: PlayerState | null;
+
+    // Attack/Defense phase tracking (PRD)
+    pendingAttack?: {
+        attackerId: string;
+        attackerSlotIndex: number;
+        defenderSlotIndex: number;
+        attackSum: number;      // Base ATK + Ponto bonuses
+        defenseSum: number;     // Base DEF + Action bonuses
+        defenderMovesRemaining: number; // Defender gets 3 moves
+    };
+
+    // Match timer (PRD: 20 minutes)
+    matchStartTime?: number;
+    matchTimeLimit: number; // 20 min = 1200 seconds
+    isGoldenGoal?: boolean; // Sudden death mode
+    winReason?: 'score' | 'timeout' | 'golden_goal' | 'surrender' | 'disconnect';
 
     lastAction?: GameAction;
     winner?: string;
@@ -99,12 +132,28 @@ export interface ClientToServerEvents {
     start_game: (data: { roomId: string }) => void;
     play_card: (data: { cardId: string; slotIndex: number }) => void;
     attack: (data: { attackerSlotIndex: number; defenderSlotIndex: number }) => void;
+    flip_card: (data: { slotIndex: number }) => void;
+    swap_cards: (data: { handCardId: string; fieldSlotIndex: number }) => void;
+    use_action_card: (data: {
+        cardId: string;
+        slotIndex1?: number;
+        slotIndex2?: number;
+        isOpponentSlot1?: boolean;
+        isOpponentSlot2?: boolean;
+    }) => void;
+    summon_legendary: (data: {
+        legendaryCardId: string;
+        discardCardIds: [string, string];
+        fieldSlotIndex: number;
+    }) => void;
+    end_defense: () => void;
     end_turn: () => void;
 
     // Chat
     send_message: (message: string) => void;
 
-    // Disconnect
+    // Game Control
+    surrender: () => void;
     leave_game: () => void;
 }
 

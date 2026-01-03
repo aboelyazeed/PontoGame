@@ -456,8 +456,182 @@ export function setupGameSocket(io: Server) {
                 });
 
                 io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Auto-end turn if no moves remaining
+                if (player && player.movesRemaining <= 0) {
+                    const endSuccess = gameService.endTurn(game, socket.userId!);
+                    if (endSuccess) {
+                        io.to(`game:${game.id}`).emit('game_update', game);
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit
+                        });
+                    }
+                }
             } else {
                 socket.emit('error', { message: 'لا يمكن لعب هذا الكارت', code: 'INVALID_MOVE' });
+            }
+        });
+
+        // Flip a face-down card to reveal it (costs 1 move)
+        socket.on('flip_card', ({ slotIndex }) => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const success = gameService.flipCard(game, socket.userId!, slotIndex);
+
+            if (success) {
+                const player = game.player1.odium === socket.userId
+                    ? game.player1
+                    : game.player2;
+
+                io.to(`game:${game.id}`).emit('card_flipped', {
+                    playerId: socket.userId!,
+                    slotIndex,
+                    card: player?.field[slotIndex],
+                });
+
+                io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Auto-end turn if no moves remaining
+                if (player && player.movesRemaining <= 0) {
+                    const endSuccess = gameService.endTurn(game, socket.userId!);
+                    if (endSuccess) {
+                        io.to(`game:${game.id}`).emit('game_update', game);
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit
+                        });
+                    }
+                }
+            } else {
+                socket.emit('error', { message: 'لا يمكن قلب الكارت', code: 'INVALID_FLIP' });
+            }
+        });
+
+        // Swap a card from hand with a card on field (costs 1 move)
+        socket.on('swap_cards', ({ handCardId, fieldSlotIndex }) => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const success = gameService.swapCards(game, socket.userId!, handCardId, fieldSlotIndex);
+
+            if (success) {
+                const player = game.player1.odium === socket.userId
+                    ? game.player1
+                    : game.player2;
+
+                io.to(`game:${game.id}`).emit('cards_swapped', {
+                    playerId: socket.userId!,
+                    fieldSlotIndex,
+                });
+
+                io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Auto-end turn if no moves remaining
+                if (player && player.movesRemaining <= 0) {
+                    const endSuccess = gameService.endTurn(game, socket.userId!);
+                    if (endSuccess) {
+                        io.to(`game:${game.id}`).emit('game_update', game);
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit
+                        });
+                    }
+                }
+            } else {
+                socket.emit('error', { message: 'لا يمكن تبديل الكروت', code: 'INVALID_SWAP' });
+            }
+        });
+
+        // Use an action card (costs 1 move)
+        socket.on('use_action_card', ({ cardId, slotIndex1, slotIndex2, isOpponentSlot1, isOpponentSlot2 }) => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.useActionCard(game, socket.userId!, cardId, {
+                slotIndex1,
+                slotIndex2,
+                isOpponentSlot1,
+                isOpponentSlot2
+            });
+
+            if (result.success) {
+                io.to(`game:${game.id}`).emit('action_card_used', {
+                    playerId: socket.userId!,
+                    cardId,
+                    drawnCards: result.drawnCards,
+                    varResult: result.varResult,
+                });
+
+                io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Auto-end turn if no moves remaining
+                const player = game.player1.odium === socket.userId
+                    ? game.player1
+                    : game.player2;
+
+                if (player && player.movesRemaining <= 0 && game.turnPhase !== 'defense') {
+                    const endSuccess = gameService.endTurn(game, socket.userId!);
+                    if (endSuccess) {
+                        io.to(`game:${game.id}`).emit('game_update', game);
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit
+                        });
+                    }
+                }
+            } else {
+                socket.emit('error', { message: result.message || 'لا يمكن استخدام الكارت', code: 'INVALID_ACTION' });
+            }
+        });
+
+        // Summon a legendary player (costs 1 move + discard 2 cards)
+        socket.on('summon_legendary', ({ legendaryCardId, discardCardIds, fieldSlotIndex }) => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.summonLegendary(game, socket.userId!, legendaryCardId, discardCardIds, fieldSlotIndex);
+
+            if (result.success) {
+                const player = game.player1.odium === socket.userId
+                    ? game.player1
+                    : game.player2;
+
+                io.to(`game:${game.id}`).emit('legendary_summoned', {
+                    playerId: socket.userId!,
+                    legendaryCardId,
+                    fieldSlotIndex,
+                    card: player?.field[fieldSlotIndex],
+                });
+
+                io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Auto-end turn if no moves remaining
+                if (player && player.movesRemaining <= 0) {
+                    const endSuccess = gameService.endTurn(game, socket.userId!);
+                    if (endSuccess) {
+                        io.to(`game:${game.id}`).emit('game_update', game);
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit
+                        });
+                    }
+                }
+            } else {
+                socket.emit('error', { message: result.message || 'لا يمكن استدعاء الأسطورة', code: 'INVALID_SUMMON' });
             }
         });
 
@@ -505,9 +679,93 @@ export function setupGameSocket(io: Server) {
                         winnerId: socket.userId!,
                         reason: 'فوز بالنقاط',
                     });
+                } else {
+                    // Auto-end turn if no moves remaining (attack costs 2 so often ends turn)
+                    if (attacker!.movesRemaining <= 0) {
+                        const endSuccess = gameService.endTurn(game, socket.userId!);
+                        if (endSuccess) {
+                            io.to(`game:${game.id}`).emit('game_update', game);
+                            io.to(`game:${game.id}`).emit('turn_start', {
+                                playerId: game.currentTurn,
+                                timeLimit: game.turnTimeLimit
+                            });
+                        }
+                    }
                 }
             } else {
                 socket.emit('error', { message: 'هجوم غير صالح', code: 'INVALID_ATTACK' });
+            }
+        });
+
+        // Defender ends defense phase - resolves the attack
+        socket.on('end_defense', () => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            if (game.turnPhase !== 'defense') {
+                socket.emit('error', { message: 'ليس في مرحلة الدفاع', code: 'NOT_DEFENSE_PHASE' });
+                return;
+            }
+
+            // Capture attacker ID before resolving (resolveAttack clears pendingAttack)
+            const attackerId = game.pendingAttack?.attackerId;
+
+            // Resolve the pending attack
+            const result = gameService.resolveAttack(game);
+
+            if (result.success) {
+                io.to(`game:${game.id}`).emit('attack_result', {
+                    result: result.result,
+                    damage: result.damage || 0,
+                });
+
+                io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Check win condition using captured attacker ID
+                const attacker = attackerId
+                    ? (game.player1.odium === attackerId ? game.player1 : game.player2)
+                    : null;
+
+                const WINNING_SCORE = 5;
+                if (attacker && attacker.score >= WINNING_SCORE) {
+                    gameService.endGame(game, attacker.odium, 'وصل للنتيجة المطلوبة');
+                    io.to(`game:${game.id}`).emit('game_end', {
+                        winnerId: attacker.odium,
+                        reason: 'فوز بالنقاط',
+                    });
+                } else {
+                    // Notify current player of their turn
+                    io.to(`game:${game.id}`).emit('turn_start', {
+                        playerId: game.currentTurn,
+                        timeLimit: game.turnTimeLimit
+                    });
+                }
+            }
+        });
+
+        // Player surrenders
+        socket.on('surrender', () => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game || game.status !== 'playing') {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const opponent = game.player1.odium === socket.userId
+                ? game.player2
+                : game.player1;
+
+            if (opponent) {
+                game.winReason = 'surrender';
+                gameService.endGame(game, opponent.odium, 'استسلام');
+                io.to(`game:${game.id}`).emit('game_end', {
+                    winnerId: opponent.odium,
+                    reason: 'استسلام الخصم',
+                    winReason: 'surrender',
+                });
             }
         });
 
