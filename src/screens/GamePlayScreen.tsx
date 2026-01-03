@@ -38,6 +38,8 @@ const COLORS = {
     warning: '#eab308',
     info: '#3b82f6',
     ponto: '#F97316',
+    secondary: '#F97316',
+    surfaceDarker: '#142814',
 };
 
 // Card images mapping
@@ -113,6 +115,11 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     } = useGameLogic(myPlayerId, initialGameState);
 
     const [showMenu, setShowMenu] = useState(false);
+    // Action Card State
+    const [selectedActionCard, setSelectedActionCard] = useState<GameCard | null>(null);
+    const [actionTargetMode, setActionTargetMode] = useState<'none' | 'swap_my' | 'swap_opp' | 'target_opp' | 'target_my' | 'target_slot'>('none');
+    const [tempTargetData, setTempTargetData] = useState<any>({});
+    const [instructionText, setInstructionText] = useState<string | null>(null);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -128,8 +135,91 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         setShowMenu(false);
     };
 
+    const handleActionUse = (card: GameCard) => {
+        if (!card.actionEffect) return;
+
+        switch (card.actionEffect) {
+            case 'swap':
+                setActionTargetMode('swap_my');
+                setInstructionText('اختر لاعب من عندك لتبديله');
+                break;
+            case 'red_card':
+            case 'yellow_card':
+                setActionTargetMode('target_opp');
+                setInstructionText('اختر لاعب الخصم');
+                break;
+            case 'biter':
+            case 'shoulder':
+                setActionTargetMode('target_my');
+                setInstructionText('اختر لاعبك للتأثير');
+                break;
+            default:
+                // No target needed (VAR, Mercato)
+                useActionCard(card.id);
+                setSelectedActionCard(null);
+                break;
+        }
+    };
+
+    const handleFieldTargetPress = (card: GameCard | null, slotIndex: number, isOpponent: boolean) => {
+        if (!selectedActionCard) return;
+
+        const effect = selectedActionCard.actionEffect;
+
+        if (actionTargetMode === 'target_opp') {
+            if (!isOpponent || !card) {
+                Alert.alert('خطأ', 'يجب اختيار لاعب خصم');
+                return;
+            }
+            useActionCard(selectedActionCard.id, { slotIndex1: slotIndex, isOpponentSlot1: true });
+            resetActionState();
+        }
+        else if (actionTargetMode === 'target_my') {
+            if (isOpponent || !card) {
+                Alert.alert('خطأ', 'يجب اختيار لاعب من فريقك');
+                return;
+            }
+            useActionCard(selectedActionCard.id, { slotIndex1: slotIndex });
+            resetActionState();
+        }
+        else if (actionTargetMode === 'swap_my') {
+            if (isOpponent || !card) {
+                Alert.alert('خطأ', 'يجب اختيار لاعب من فريقك أولاً');
+                return;
+            }
+            setTempTargetData({ slotIndex1: slotIndex });
+            setActionTargetMode('swap_opp');
+            setInstructionText('اختر لاعب الخصم للمبادلة');
+        }
+        else if (actionTargetMode === 'swap_opp') {
+            if (!isOpponent || !card) {
+                Alert.alert('خطأ', 'يجب اختيار لاعب خصم');
+                return;
+            }
+            useActionCard(selectedActionCard.id, {
+                slotIndex1: tempTargetData.slotIndex1,
+                slotIndex2: slotIndex,
+                isOpponentSlot2: true
+            });
+            resetActionState();
+        }
+    };
+
+    const resetActionState = () => {
+        setSelectedActionCard(null);
+        setActionTargetMode('none');
+        setInstructionText(null);
+        setTempTargetData({});
+    };
+
     const handleFieldCardPress = (card: GameCard | null, slotIndex: number, isOpponent: boolean) => {
         if (!isMyTurn && !isDefensePhase) return;
+
+        // Handle Action Targeting
+        if (actionTargetMode !== 'none') {
+            handleFieldTargetPress(card, slotIndex, isOpponent);
+            return;
+        }
 
         if (attackMode && isOpponent) {
             attack(slotIndex);
@@ -149,6 +239,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
 
     const handleEmptySlotPress = (slotIndex: number) => {
         if (!isMyTurn || attackMode) return;
+        if (actionTargetMode !== 'none') return; // Don't allow playing to empty slots while targeting
 
         if (selectedCardId && myPlayer) {
             const selectedCard = myPlayer.hand.find(c => c.id === selectedCardId);
@@ -160,7 +251,14 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
 
     const handleHandCardPress = (card: GameCard) => {
         if (!isMyTurn && !isDefensePhase) return;
-        selectCard(card.id, true);
+
+        if (card.type === 'action') {
+            setSelectedActionCard(card);
+            // Don't select it as "active" card for playing, but show modal
+            selectCard(card.id, true); // Keep visual selection too? Maybe.
+        } else {
+            selectCard(card.id, true);
+        }
     };
 
     // Render opponent field slot
@@ -305,10 +403,11 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         );
     }
 
-    const phaseText = attackMode ? 'اختر الهدف'
-        : isDefensePhase ? 'دافع!'
-            : isMyTurn ? 'دورك - اللعب'
-                : 'دور المنافس';
+    const phaseText = instructionText ? instructionText
+        : attackMode ? 'اختر الهدف'
+            : isDefensePhase ? 'دافع!'
+                : isMyTurn ? 'دورك - اللعب'
+                    : 'دور المنافس';
 
     return (
         <View style={styles.container}>
@@ -527,6 +626,43 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                         </TouchableOpacity>
                     </View>
                 </TouchableOpacity>
+            </Modal>
+
+            {/* Action Card Modal */}
+            <Modal
+                visible={!!selectedActionCard && actionTargetMode === 'none'}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setSelectedActionCard(null)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.actionModalContent}>
+                        <Text style={styles.actionModalTitle}>{selectedActionCard?.nameAr || 'أكشن'}</Text>
+
+                        <View style={styles.actionCardPreview}>
+                            <MaterialIcons name="flash-on" size={48} color={COLORS.warning} />
+                            <Text style={styles.actionCardPreviewName}>{selectedActionCard?.name}</Text>
+                        </View>
+
+                        <Text style={styles.actionModalDesc}>{selectedActionCard?.description}</Text>
+
+                        <View style={styles.actionModalButtons}>
+                            <TouchableOpacity
+                                style={styles.actionUseButton}
+                                onPress={() => selectedActionCard && handleActionUse(selectedActionCard)}
+                            >
+                                <Text style={styles.actionButtonText}>استخدام</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.actionCancelButton}
+                                onPress={() => setSelectedActionCard(null)}
+                            >
+                                <Text style={styles.actionButtonText}>إلغاء</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
             </Modal>
 
             {/* Game End Modal */}
@@ -1081,28 +1217,107 @@ const styles = StyleSheet.create({
     handCardActionLabel: {
         position: 'absolute',
         bottom: 8,
-        width: '100%',
+        left: 0,
+        right: 0,
         textAlign: 'center',
-        fontSize: 12,
-        fontWeight: 'bold',
         color: COLORS.warning,
+        fontSize: 10,
+        fontWeight: 'bold',
+        textShadowColor: 'rgba(0,0,0,0.8)',
+        textShadowRadius: 2,
     },
     handCardPontoLabel: {
         position: 'absolute',
         bottom: 8,
-        width: '100%',
+        left: 0,
+        right: 0,
         textAlign: 'center',
-        fontSize: 12,
+        color: COLORS.secondary,
+        fontSize: 10,
         fontWeight: 'bold',
-        color: COLORS.ponto,
+        textShadowColor: 'rgba(0,0,0,0.8)',
+        textShadowRadius: 2,
     },
+
+    // ACTION MODAL
+    actionModalContent: {
+        width: '85%',
+        backgroundColor: COLORS.surfaceDarker,
+        borderRadius: 16,
+        padding: 20,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.cardBorder,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    actionModalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+        marginBottom: 16,
+    },
+    actionCardPreview: {
+        width: 100,
+        height: 140,
+        backgroundColor: COLORS.surfaceLighter,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: COLORS.warning,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+    actionCardPreviewName: {
+        color: COLORS.warning,
+        marginTop: 8,
+        fontWeight: 'bold',
+    },
+    actionModalDesc: {
+        fontSize: 16,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
+    },
+    actionModalButtons: {
+        flexDirection: 'row',
+        gap: 12,
+        width: '100%',
+    },
+    actionUseButton: {
+        flex: 1,
+        backgroundColor: COLORS.warning,
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    actionCancelButton: {
+        flex: 1,
+        backgroundColor: COLORS.surfaceLighter,
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    actionButtonText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+
+
+    // OTHER MODALS & LABELS
+
     pontoCardValue: {
         fontSize: 28,
         fontWeight: 'bold',
         color: COLORS.ponto,
     },
-
-    // MODALS
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.7)',
