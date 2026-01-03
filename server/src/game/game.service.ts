@@ -223,6 +223,14 @@ const FULL_DECK = {
 
 export class GameService {
     // ========================================
+    // Active Games Access (for timer monitoring)
+    // ========================================
+
+    getActiveGames(): Map<string, GameState> {
+        return activeGames;
+    }
+
+    // ========================================
     // Queue Management
     // ========================================
 

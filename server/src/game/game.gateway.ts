@@ -77,6 +77,42 @@ export function setupGameSocket(io: Server) {
         io.emit('online_users_update', { count: onlineCount });
 
         // ========================================
+        // Turn Timer Monitoring (Check every second)
+        // ========================================
+        const turnTimerInterval = setInterval(() => {
+            const activeGamesMap = gameService.getActiveGames();
+            const now = Date.now();
+
+            activeGamesMap.forEach((game, gameId) => {
+                if (game.status !== 'playing') return;
+                if (!game.turnStartTime) return;
+
+                const elapsedSeconds = (now - game.turnStartTime) / 1000;
+
+                // Check if turn time has expired (90 seconds)
+                if (elapsedSeconds >= game.turnTimeLimit) {
+                    console.log(`⏰ Turn timeout for game ${gameId} - Player ${game.currentTurn}`);
+
+                    // Auto-end the turn
+                    const success = gameService.endTurn(game, game.currentTurn);
+                    if (success) {
+                        io.to(`game:${gameId}`).emit('game_update', game);
+                        io.to(`game:${gameId}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit
+                        });
+                        console.log(`⏰ Turn auto-ended. Now ${game.currentTurn}'s turn.`);
+                    }
+                }
+            });
+        }, 1000);
+
+        // Clean up timer on disconnect
+        socket.on('disconnect', () => {
+            clearInterval(turnTimerInterval);
+        });
+
+        // ========================================
         // Room Events
         // ========================================
 
