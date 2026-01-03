@@ -4,6 +4,7 @@
 
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import prisma from '../config/database.js';
 import { gameService } from './game.service.js';
 import {
     ClientToServerEvents,
@@ -23,7 +24,7 @@ export function setupGameSocket(io: Server) {
     // ========================================
     // Authentication Middleware
     // ========================================
-    io.use((socket: AuthenticatedSocket, next) => {
+    io.use(async (socket: AuthenticatedSocket, next) => {
         const token = socket.handshake.auth.token;
 
         if (!token) {
@@ -39,10 +40,22 @@ export function setupGameSocket(io: Server) {
             socket.userId = decoded.userId;
             socket.username = decoded.username;
 
-            // In production, fetch user data from database
-            socket.displayName = socket.handshake.auth.displayName || decoded.username;
-            socket.level = socket.handshake.auth.level || 1;
-            socket.rank = socket.handshake.auth.rank || 'مبتدئ';
+            // Fetch user data from database for accurate displayName
+            try {
+                const user = await prisma.user.findUnique({
+                    where: { id: decoded.userId },
+                    select: { displayName: true, level: true, rank: true }
+                });
+
+                socket.displayName = user?.displayName || decoded.username;
+                socket.level = user?.level || 1;
+                socket.rank = user?.rank || 'مبتدئ';
+            } catch (dbError) {
+                // Fallback if DB fails
+                socket.displayName = socket.handshake.auth.displayName || decoded.username;
+                socket.level = socket.handshake.auth.level || 1;
+                socket.rank = socket.handshake.auth.rank || 'مبتدئ';
+            }
 
             next();
         } catch (error) {
