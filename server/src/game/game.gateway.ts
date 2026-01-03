@@ -83,8 +83,9 @@ export function setupGameSocket(io: Server) {
             const room = await gameService.createRoom(entry, isPrivate, password);
             socket.join(`game:${room.id}`);
 
-            // Notify creator
+            // Notify creator with both events for reliability
             socket.emit('room_created', room);
+            socket.emit('join_success', room);
 
             // Broadcast update to all (except creator if private)
             if (!isPrivate) {
@@ -133,9 +134,13 @@ export function setupGameSocket(io: Server) {
                 // Send room update to all in room
                 io.to(roomSocketId).emit('room_update', room);
 
+                // Confirm join to the player (reliable navigation trigger)
+                socket.emit('join_success', room);
+
                 // Update rooms list for everyone else
                 io.emit('rooms_list_update', gameService.getAvailableRooms());
             } else {
+                console.log(`❌ Join failed for ${socket.username}: Room not found, full, or invalid state`);
                 socket.emit('error', { message: 'الغرفة ممتلئة أو كلمة المرور غير صحيحة', code: 'ROOM_ERROR' });
             }
         });
@@ -171,6 +176,9 @@ export function setupGameSocket(io: Server) {
 
                 // Send room update to all in room
                 io.to(roomSocketId).emit('room_update', room);
+
+                // Confirm join to the player (reliable navigation trigger)
+                socket.emit('join_success', room);
 
                 // Update rooms list for everyone else
                 io.emit('rooms_list_update', gameService.getAvailableRooms());
@@ -236,7 +244,7 @@ export function setupGameSocket(io: Server) {
             const isHost = game.player1.odium === socket.userId;
             const hasOtherPlayer = game.player2 !== null;
 
-            if (game.status === 'waiting') {
+            if (game.status === 'waiting' || game.status === 'starting') {
                 if (isHost && hasOtherPlayer) {
                     // Host leaving with another player - transfer host
                     const result = gameService.transferHost(game.id);
@@ -266,7 +274,7 @@ export function setupGameSocket(io: Server) {
         // ========================================
 
         socket.on('kick_player', ({ roomId, playerId }) => {
-            console.log(`👢 ${socket.username} kicking player ${playerId} from room ${roomId}`);
+            console.log(`👢 ${socket.username} kicking player ${playerId}`);
 
             const game = gameService.getGameByPlayer(socket.userId!);
             if (!game || game.player1.odium !== socket.userId) {
@@ -285,6 +293,12 @@ export function setupGameSocket(io: Server) {
             // Notify ONLY the kicked player (by their socket ID, not room broadcast)
             if (kickedPlayerSocketId) {
                 io.to(kickedPlayerSocketId).emit('kicked', { playerId });
+
+                // Force socket to leave room channel
+                const kickedSocket = io.sockets.sockets.get(kickedPlayerSocketId);
+                if (kickedSocket) {
+                    kickedSocket.leave(roomSocketId);
+                }
             }
 
             // Remove player2

@@ -122,6 +122,14 @@ export interface ServerToClientEvents {
     rooms_list: (rooms: GameState[]) => void;
     rooms_list_update: (rooms: GameState[]) => void;
 
+    // Room Membership
+    join_success: (room: GameState) => void;
+    room_update: (room: GameState) => void;
+    player_joined: (data: { player: any }) => void;
+    player_left: (playerId: string) => void;
+    kicked: (data: { playerId: string }) => void;
+    host_changed: (data: { newHostId: string }) => void;
+
     // Game Events
     game_start: (gameState: GameState) => void;
     game_update: (gameState: GameState) => void;

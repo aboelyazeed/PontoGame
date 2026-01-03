@@ -174,8 +174,8 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     };
 
     const handleKickPlayer = () => {
-        if (!room?.id || !opponentPlayer?.odium) return;
-        socketService.emit('kick_player', { roomId: room.id, playerId: opponentPlayer.odium });
+        if (!room?.id || !room?.player2?.odium) return;
+        socketService.emit('kick_player', { roomId: room.id, playerId: room.player2.odium });
     };
 
     const handleTransferHost = () => {

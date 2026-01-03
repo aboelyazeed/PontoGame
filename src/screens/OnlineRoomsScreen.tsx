@@ -96,23 +96,21 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
         const handleRoomCreated = (room: any) => {
             setCreateModalVisible(false);
             showToast('تم إنشاء الغرفة بنجاح', 'success');
-            // Navigate to waiting room with room data
             onCreateRoom(room);
         };
 
         // When joining a room, only the JOINER receives this callback
         // We only navigate if we were the one who initiated the join
-        const handleRoomUpdate = (room: any) => {
-            // Check if we initiated a join
-            if (!isJoiningRef.current) {
-                // We didn't initiate a join, so we're the host getting an update
-                return;
-            }
+        const handleJoinSuccess = (room: any) => {
             isJoiningRef.current = false;
             setJoinModalVisible(false);
             setIsPasswordModalVisible(false);
             showToast('تم الانضمام للغرفة!', 'success');
             onJoinRoom(room.id, room);
+        };
+
+        const handleRoomUpdate = (room: any) => {
+            // Room updates handled by WaitingRoomScreen after navigation
         };
 
         const handleGameStart = (room: any) => {
@@ -126,12 +124,14 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
             showToast(error.message || 'حدث خطأ ما', 'error');
             setIsRefreshing(false);
             setIsLoading(false);
+            isJoiningRef.current = false;
         };
 
         socketService.on('rooms_list_update', handleRoomsUpdate);
         socketService.on('rooms_list', handleRoomsUpdate);
         socketService.on('room_created', handleRoomCreated);
         socketService.on('room_update', handleRoomUpdate);
+        socketService.on('join_success', handleJoinSuccess);
         socketService.on('game_start', handleGameStart);
         socketService.on('online_users_update', handleOnlineUsersUpdate);
         socketService.on('error', handleError);
@@ -141,6 +141,7 @@ const OnlineRoomsScreen: React.FC<OnlineRoomsScreenProps> = ({
             socketService.off('rooms_list');
             socketService.off('room_created');
             socketService.off('room_update');
+            socketService.off('join_success');
             socketService.off('game_start');
             socketService.off('online_users_update');
             socketService.off('error');

@@ -294,7 +294,8 @@ export class GameService {
     }
 
     deleteRoom(roomId: string): boolean {
-        const room = activeRooms.get(roomId);
+        // Check both activeRooms and activeGames
+        const room = activeRooms.get(roomId) || activeGames.get(roomId);
         if (!room) return false;
 
         // Clean up all references
@@ -319,19 +320,28 @@ export class GameService {
     }
 
     removePlayer2(roomId: string): boolean {
-        const room = activeRooms.get(roomId);
+        // Check both activeRooms and activeGames
+        const room = activeRooms.get(roomId) || activeGames.get(roomId);
         if (!room || !room.player2) return false;
 
         // Clean up player2's references
         playerToGame.delete(room.player2.odium);
         room.player2 = null;
 
+        // If game was "starting" (in activeGames), revert to "waiting" and move back to activeRooms
+        if (room.status === 'starting') {
+            room.status = 'waiting';
+            activeGames.delete(roomId);
+            activeRooms.set(roomId, room);
+        }
+
         console.log(`👋 Player2 removed from room ${roomId}`);
         return true;
     }
 
     transferHost(roomId: string): GameState | null {
-        const room = activeRooms.get(roomId);
+        // Check both activeRooms and activeGames
+        const room = activeRooms.get(roomId) || activeGames.get(roomId);
         if (!room || !room.player2) return null;
 
         // Swap player1 and player2
@@ -342,6 +352,13 @@ export class GameService {
         // Update playerToGame mapping - remove old host
         playerToGame.delete(oldHost.odium);
         // player1 (new host) already has mapping to this room
+
+        // If game was "starting" (in activeGames), revert to "waiting" and move back to activeRooms
+        if (room.status === 'starting') {
+            room.status = 'waiting';
+            activeGames.delete(roomId);
+            activeRooms.set(roomId, room);
+        }
 
         console.log(`👑 Host transferred from ${oldHost.odiumInfo.displayName} to ${room.player1.odiumInfo.displayName}`);
         return room;
@@ -418,7 +435,7 @@ export class GameService {
     getGameByPlayer(odium: string): GameState | null {
         const gameId = playerToGame.get(odium);
         if (!gameId) return null;
-        return activeGames.get(gameId) || null;
+        return activeRooms.get(gameId) || activeGames.get(gameId) || null;
     }
 
     playCard(gameState: GameState, odium: string, cardId: string, slotIndex: number): boolean {
