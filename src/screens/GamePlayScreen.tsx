@@ -486,41 +486,29 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
 
                         {/* Left Side - Players + Action Decks */}
                         <View style={styles.deckSidebarLeft}>
-                            {/* Player Deck - visible during draw phase or when can draw */}
+                            {/* Player Deck - ONLY visible/clickable during draw phase */}
                             <TouchableOpacity
                                 style={[
                                     styles.deckCard,
                                     gameState?.turnPhase === 'draw' && isMyTurn && styles.deckCardActive
                                 ]}
-                                onPress={() => {
-                                    if (gameState?.turnPhase === 'draw') {
-                                        drawFromDeck('player');
-                                    } else {
-                                        drawCards('player', 1);
-                                    }
-                                }}
-                                disabled={!isMyTurn || (gameState?.turnPhase !== 'draw' && (myPlayer?.movesRemaining || 0) < 1)}
+                                onPress={() => drawFromDeck('player')}
+                                disabled={!isMyTurn || gameState?.turnPhase !== 'draw'}
                             >
-                                <Ionicons name="people" size={20} color={gameState?.turnPhase === 'draw' && isMyTurn ? COLORS.primary : 'rgba(255,255,255,0.4)'} />
+                                <Ionicons name="people" size={20} color={gameState?.turnPhase === 'draw' && isMyTurn ? COLORS.primary : 'rgba(255,255,255,0.2)'} />
                                 <Text style={[styles.deckLabel, gameState?.turnPhase === 'draw' && isMyTurn && styles.deckLabelActive]}>لاعبين</Text>
                             </TouchableOpacity>
 
-                            {/* Action Deck */}
+                            {/* Action Deck - ONLY clickable during draw phase */}
                             <TouchableOpacity
                                 style={[
                                     styles.deckCard,
                                     gameState?.turnPhase === 'draw' && isMyTurn && styles.deckCardActive
                                 ]}
-                                onPress={() => {
-                                    if (gameState?.turnPhase === 'draw') {
-                                        drawFromDeck('action');
-                                    } else {
-                                        drawCards('action', 1);
-                                    }
-                                }}
-                                disabled={!isMyTurn || (gameState?.turnPhase !== 'draw' && (myPlayer?.movesRemaining || 0) < 1)}
+                                onPress={() => drawFromDeck('action')}
+                                disabled={!isMyTurn || gameState?.turnPhase !== 'draw'}
                             >
-                                <MaterialIcons name="flash-on" size={20} color={gameState?.turnPhase === 'draw' && isMyTurn ? COLORS.warning : 'rgba(255,255,255,0.4)'} />
+                                <MaterialIcons name="flash-on" size={20} color={gameState?.turnPhase === 'draw' && isMyTurn ? COLORS.warning : 'rgba(255,255,255,0.2)'} />
                                 <Text style={[styles.deckLabel, gameState?.turnPhase === 'draw' && isMyTurn && styles.deckLabelActive]}>أكشن</Text>
                             </TouchableOpacity>
                         </View>
