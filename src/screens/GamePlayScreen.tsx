@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -9,20 +9,38 @@ import {
     ScrollView,
     Dimensions,
     Image,
+    Modal,
+    Alert,
+    ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useGameLogic, GameCard } from '../hooks/useGameLogic';
+import { useAuthStore } from '../store/authStore';
 
 // Force RTL
 I18nManager.forceRTL(true);
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = 80;
-const SLOT_WIDTH = 60;
+const { width, height } = Dimensions.get('window');
 
-// Card images
+// Colors matching HTML design
+const COLORS = {
+    primary: '#09aa09',
+    primaryDark: '#067a06',
+    backgroundDark: '#102210',
+    surfaceDark: '#1a331a',
+    surfaceLighter: '#244224',
+    cardBorder: 'rgba(255,255,255,0.1)',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#9CA3AF',
+    textSlate: '#6B7280',
+    error: '#ef4444',
+    warning: '#eab308',
+    info: '#3b82f6',
+    ponto: '#F97316',
+};
+
+// Card images mapping
 const CARD_IMAGES: Record<string, any> = {
     'GK.png': require('../../assets/Cards/GK.png'),
     'DF.png': require('../../assets/Cards/DF.png'),
@@ -32,33 +50,69 @@ const CARD_IMAGES: Record<string, any> = {
     'ST.png': require('../../assets/Cards/ST.png'),
 };
 
+const getCardImage = (card: GameCard) => {
+    if (card.imageUrl && CARD_IMAGES[card.imageUrl]) {
+        return CARD_IMAGES[card.imageUrl];
+    }
+    switch (card.position) {
+        case 'GK': return CARD_IMAGES['GK.png'];
+        case 'DF': return CARD_IMAGES['DF.png'];
+        case 'MF': return card.defense && card.defense > 3 ? CARD_IMAGES['CDM.png'] : CARD_IMAGES['CAM.png'];
+        case 'FW': return CARD_IMAGES['FW.png'];
+        default: return null;
+    }
+};
+
+const getPositionColor = (position?: string) => {
+    switch (position) {
+        case 'FW': return COLORS.warning;
+        case 'MF': return COLORS.primary;
+        case 'DF': return COLORS.info;
+        case 'GK': return COLORS.ponto;
+        default: return COLORS.primary;
+    }
+};
+
 interface GamePlayScreenProps {
     onBack?: () => void;
     initialGameState?: any;
 }
 
 const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameState }) => {
+    const { user } = useAuthStore();
+    const myPlayerId = user?.id || null;
+
     const {
         gameState,
         isMyTurn,
+        isDefensePhase,
         timerSeconds,
+        matchTimerSeconds,
         selectedCardId,
+        attackMode,
+        selectedAttackerSlot,
+        lastAttackResult,
+        gameEndInfo,
         myPlayer,
         opponent,
+        pendingAttack,
         selectCard,
         playCard,
+        drawCards,
+        flipCard,
+        swapCards,
+        useActionCard,
+        summonLegendary,
+        enterAttackMode,
+        cancelAttackMode,
+        attack,
+        endDefense,
         endTurn,
-    } = useGameLogic(initialGameState);
+        surrender,
+        clearGameEnd,
+    } = useGameLogic(myPlayerId, initialGameState);
 
-    const getPositionColor = (position?: string) => {
-        switch (position) {
-            case 'FW': return '#eab308';
-            case 'MF': return '#22c55e';
-            case 'DF': return '#3b82f6';
-            case 'GK': return '#f97316';
-            default: return COLORS.primary;
-        }
-    };
+    const [showMenu, setShowMenu] = useState(false);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -66,106 +120,177 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
-    const renderOpponentSlot = (card: GameCard | null, index: number) => (
-        <View key={index} style={styles.cardSlot}>
-            {card ? (
-                <View style={styles.cardBack}>
-                    <Ionicons name="help" size={20} color="rgba(255,255,255,0.3)" />
-                    <Text style={styles.cardBackText}>?</Text>
-                </View>
-            ) : (
-                <View style={styles.emptySlotInner}>
-                    <Ionicons name="remove" size={16} color="rgba(255,255,255,0.1)" />
-                </View>
-            )}
-        </View>
-    );
+    const handleSurrender = () => {
+        Alert.alert('استسلام', 'هل أنت متأكد؟', [
+            { text: 'إلغاء', style: 'cancel' },
+            { text: 'استسلام', style: 'destructive', onPress: surrender },
+        ]);
+        setShowMenu(false);
+    };
 
+    const handleFieldCardPress = (card: GameCard | null, slotIndex: number, isOpponent: boolean) => {
+        if (!isMyTurn && !isDefensePhase) return;
+
+        if (attackMode && isOpponent) {
+            attack(slotIndex);
+            return;
+        }
+
+        if (!isOpponent && card && !attackMode) {
+            if (selectedCardId === card.id) {
+                if (myPlayer && myPlayer.movesRemaining >= 2) {
+                    enterAttackMode(slotIndex);
+                }
+            } else {
+                selectCard(card.id, false);
+            }
+        }
+    };
+
+    const handleEmptySlotPress = (slotIndex: number) => {
+        if (!isMyTurn || attackMode) return;
+
+        if (selectedCardId && myPlayer) {
+            const selectedCard = myPlayer.hand.find(c => c.id === selectedCardId);
+            if (selectedCard && selectedCard.type === 'player') {
+                playCard(slotIndex);
+            }
+        }
+    };
+
+    const handleHandCardPress = (card: GameCard) => {
+        if (!isMyTurn && !isDefensePhase) return;
+        selectCard(card.id, true);
+    };
+
+    // Render opponent field slot
+    const renderOpponentSlot = (card: GameCard | null, index: number) => {
+        const isTarget = attackMode;
+        return (
+            <TouchableOpacity
+                key={index}
+                style={[styles.fieldSlot, isTarget && styles.fieldSlotTarget]}
+                onPress={() => handleFieldCardPress(card, index, true)}
+                disabled={!attackMode}
+            >
+                {card ? (
+                    card.isRevealed === false ? (
+                        <View style={styles.cardBack}>
+                            <View style={styles.cardBackCircle} />
+                        </View>
+                    ) : (
+                        <View style={styles.slotCardFilled}>
+                            {getCardImage(card) && (
+                                <Image source={getCardImage(card)} style={styles.slotCardImage} resizeMode="cover" />
+                            )}
+                            <View style={styles.slotCardOverlay}>
+                                <Text style={styles.slotCardStat}>
+                                    {card.position} {card.attack || card.defense}
+                                </Text>
+                            </View>
+                        </View>
+                    )
+                ) : (
+                    <View style={styles.emptySlotCircle} />
+                )}
+            </TouchableOpacity>
+        );
+    };
+
+    // Render player field slot
     const renderPlayerSlot = (card: GameCard | null, index: number) => {
         const isSelected = card?.id === selectedCardId;
+        const isAttacker = attackMode && selectedAttackerSlot === index;
 
         if (!card) {
             return (
                 <TouchableOpacity
                     key={index}
-                    style={styles.emptySlot}
-                    onPress={() => playCard(index)}
-                    disabled={!isMyTurn || !selectedCardId}
+                    style={styles.fieldSlot}
+                    onPress={() => handleEmptySlotPress(index)}
+                    disabled={!isMyTurn || attackMode}
                 >
-                    <Ionicons name="add" size={20} color="rgba(255,255,255,0.1)" />
+                    <View style={styles.emptySlotCircle} />
                 </TouchableOpacity>
             );
         }
 
-        const cardImage = card.imageUrl ? CARD_IMAGES[card.imageUrl] : null;
-
+        const cardImage = getCardImage(card);
         return (
             <TouchableOpacity
                 key={index}
-                style={[styles.playerSlot, isSelected && styles.playerSlotSelected]}
-                onPress={() => selectCard(card.id, false)}
-                disabled={!isMyTurn}
+                style={[
+                    styles.fieldSlot,
+                    isSelected && styles.fieldSlotSelected,
+                    isAttacker && styles.fieldSlotAttacker,
+                ]}
+                onPress={() => handleFieldCardPress(card, index, false)}
+                disabled={!isMyTurn || isDefensePhase}
             >
-                {cardImage ? (
-                    <Image source={cardImage} style={styles.cardImage} resizeMode="cover" />
-                ) : (
-                    <View style={styles.cardContent}>
-                        <Ionicons name="person" size={20} color={COLORS.textSecondary} />
+                <View style={styles.slotCardFilled}>
+                    {cardImage && (
+                        <Image source={cardImage} style={styles.slotCardImage} resizeMode="cover" />
+                    )}
+                    {isAttacker && (
+                        <View style={styles.attackerPing} />
+                    )}
+                    <View style={[styles.slotCardOverlay, isSelected && styles.slotCardOverlaySelected]}>
+                        <Text style={styles.slotCardStat}>
+                            {card.position} {card.attack || card.defense}
+                        </Text>
                     </View>
-                )}
-
-                {/* Stats overlay */}
-                <View style={styles.slotStatsBar}>
-                    {card.attack !== undefined && card.attack > 0 && (
-                        <View style={styles.statItem}>
-                            <MaterialCommunityIcons name="sword" size={8} color="#ef4444" />
-                            <Text style={styles.statText}>{card.attack}</Text>
-                        </View>
-                    )}
-                    {card.defense !== undefined && card.defense > 0 && (
-                        <View style={styles.statItem}>
-                            <Ionicons name="shield" size={8} color="#3b82f6" />
-                            <Text style={styles.statText}>{card.defense}</Text>
-                        </View>
-                    )}
                 </View>
             </TouchableOpacity>
         );
     };
 
-    const renderHandCard = (card: GameCard, index: number) => {
+    // Render hand card
+    const renderHandCard = (card: GameCard) => {
         const isSelected = card.id === selectedCardId;
-        const cardImage = card.imageUrl ? CARD_IMAGES[card.imageUrl] : null;
+        const cardImage = getCardImage(card);
 
         return (
             <TouchableOpacity
                 key={card.id}
-                style={[
-                    styles.handCard,
-                    isSelected && styles.handCardSelected,
-                    card.type === 'action' && styles.handCardAction,
-                    card.type === 'ponto' && styles.handCardPonto,
-                ]}
-                onPress={() => selectCard(card.id, true)}
-                disabled={!isMyTurn}
+                style={[styles.handCard, isSelected && styles.handCardSelected]}
+                onPress={() => handleHandCardPress(card)}
+                disabled={!isMyTurn && !isDefensePhase}
             >
                 {cardImage ? (
                     <Image source={cardImage} style={styles.handCardImage} resizeMode="cover" />
                 ) : (
-                    <View style={styles.handCardContent}>
+                    <View style={styles.handCardPlaceholder}>
                         {card.type === 'action' ? (
-                            <Ionicons name="flash" size={28} color="#F59E0B" />
+                            <MaterialIcons name="flash-on" size={32} color={COLORS.warning} />
                         ) : card.type === 'ponto' ? (
-                            <Text style={styles.pontoValue}>+{card.attack}</Text>
+                            <Text style={styles.pontoCardValue}>+{card.attack}</Text>
                         ) : (
-                            <Ionicons name="person" size={28} color={COLORS.textSecondary} />
+                            <Ionicons name="person" size={32} color={COLORS.textSecondary} />
                         )}
                     </View>
                 )}
+                <View style={styles.handCardGradient} />
 
-                <Text numberOfLines={1} style={styles.handCardName}>
-                    {card.nameAr || card.name}
-                </Text>
+                {card.position && (
+                    <View style={[styles.positionBadge, { backgroundColor: getPositionColor(card.position) }]}>
+                        <Text style={styles.positionBadgeText}>{card.position}</Text>
+                    </View>
+                )}
+
+                {card.type === 'player' && (
+                    <>
+                        <Text style={styles.handCardRating}>{card.attack || card.defense}</Text>
+                        <Text style={styles.handCardName}>{card.nameAr}</Text>
+                    </>
+                )}
+
+                {card.type === 'action' && (
+                    <Text style={styles.handCardActionLabel}>أكشن</Text>
+                )}
+
+                {card.type === 'ponto' && (
+                    <Text style={styles.handCardPontoLabel}>بونتو</Text>
+                )}
             </TouchableOpacity>
         );
     };
@@ -174,122 +299,255 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     if (!gameState) {
         return (
             <View style={styles.loadingContainer}>
+                <MaterialCommunityIcons name="soccer" size={48} color={COLORS.primary} />
                 <Text style={styles.loadingText}>جاري تحميل اللعبة...</Text>
             </View>
         );
     }
 
+    const phaseText = attackMode ? 'اختر الهدف'
+        : isDefensePhase ? 'دافع!'
+            : isMyTurn ? 'دورك - اللعب'
+                : 'دور المنافس';
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.backgroundDark} />
 
+            {/* Background Glow */}
+            <View style={styles.backgroundGlow} />
+
             <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {/* SCOREBOARD */}
-                <View style={styles.scoreboard}>
-                    <View style={styles.scoreboardInner}>
-                        <View style={styles.playerScore}>
-                            <View style={[styles.avatar, styles.avatarMe]}>
-                                <Ionicons name="person" size={18} color={COLORS.textSecondary} />
+
+                {/* HEADER - Scoreboard */}
+                <View style={styles.header}>
+                    <View style={styles.scoreboardContainer}>
+                        {/* My Player */}
+                        <View style={styles.playerSection}>
+                            <View style={styles.avatarContainer}>
+                                <View style={[styles.avatar, styles.avatarMe]}>
+                                    <Ionicons name="person" size={18} color={COLORS.textSecondary} />
+                                </View>
+                                <View style={styles.levelBadge}>
+                                    <Text style={styles.levelText}>{myPlayer?.odiumInfo.level || 1}</Text>
+                                </View>
                             </View>
-                            <View style={styles.scoreInfo}>
-                                <Text style={styles.playerLabel}>{myPlayer?.odiumInfo.displayName || 'أنا'}</Text>
-                                <Text style={styles.scoreValue}>{myPlayer?.score || 0}</Text>
+                            <Text style={styles.scoreText}>{myPlayer?.score || 0}</Text>
+                        </View>
+
+                        {/* Timer Section */}
+                        <View style={styles.timerSection}>
+                            <View style={styles.timerBlock}>
+                                <Text style={styles.timerLabel}>الدور</Text>
+                                <Text style={[styles.timerValue, isMyTurn && styles.timerValueActive]}>
+                                    {formatTime(timerSeconds)}
+                                </Text>
+                            </View>
+                            <View style={styles.timerDivider} />
+                            <View style={styles.timerBlock}>
+                                <Text style={styles.timerLabelGray}>المباراة</Text>
+                                <Text style={styles.timerValueGray}>{formatTime(matchTimerSeconds)}</Text>
                             </View>
                         </View>
 
-                        <View style={styles.centerInfo}>
-                            <View style={[styles.timerContainer, isMyTurn && styles.timerActive]}>
-                                <Text style={styles.timerText}>{formatTime(timerSeconds)}</Text>
-                            </View>
-                            <Text style={styles.turnText}>{isMyTurn ? 'دورك' : 'دور المنافس'}</Text>
-                        </View>
-
-                        <View style={[styles.playerScore, styles.playerScoreReverse]}>
-                            <View style={styles.scoreInfo}>
-                                <Text style={styles.playerLabel}>{opponent?.odiumInfo.displayName || 'المنافس'}</Text>
-                                <Text style={styles.scoreValue}>{opponent?.score || 0}</Text>
-                            </View>
-                            <View style={[styles.avatar, styles.avatarOpponent]}>
-                                <Ionicons name="person" size={18} color={COLORS.textSlate} />
+                        {/* Opponent */}
+                        <View style={[styles.playerSection, styles.playerSectionReverse]}>
+                            <Text style={styles.scoreText}>{opponent?.score || 0}</Text>
+                            <View style={styles.avatarContainer}>
+                                <View style={[styles.avatar, styles.avatarOpponent]}>
+                                    <Ionicons name="person" size={18} color={COLORS.textSlate} />
+                                </View>
+                                <View style={styles.levelBadgeOpponent}>
+                                    <Text style={styles.levelText}>{opponent?.odiumInfo.level || 1}</Text>
+                                </View>
                             </View>
                         </View>
                     </View>
                 </View>
 
-                {/* GAME AREA */}
-                <View style={styles.gameArea}>
-                    {/* Opponent Field */}
+                {/* MAIN GAME AREA */}
+                <View style={styles.mainArea}>
+
+                    {/* Opponent Field - Full Width */}
                     <View style={styles.fieldRow}>
-                        {(opponent?.field || [null, null, null, null, null]).map((card, i) => renderOpponentSlot(card, i))}
+                        {(opponent?.field || [null, null, null, null, null]).map((card, i) =>
+                            renderOpponentSlot(card, i)
+                        )}
                     </View>
 
-                    {/* Middle Zone */}
-                    <View style={styles.middleZone}>
-                        <View style={styles.phaseBadge}>
-                            <MaterialCommunityIcons name="sword-cross" size={18} color={COLORS.primary} />
-                            <Text style={styles.phaseBadgeText}>
-                                {isMyTurn ? 'دورك' : 'دور المنافس'}
-                            </Text>
+                    {/* Center Zone with Decks on sides */}
+                    <View style={styles.centerZone}>
+
+                        {/* Left Side - Players + Action Decks */}
+                        <View style={styles.deckSidebarLeft}>
+                            <TouchableOpacity
+                                style={styles.deckCard}
+                                onPress={() => drawCards('player', 2)}
+                                disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 1}
+                            >
+                                <MaterialIcons name="group" size={20} color="rgba(255,255,255,0.4)" />
+                                <Text style={styles.deckLabel}>لاعبين</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.deckCard}
+                                onPress={() => drawCards('action', 1)}
+                                disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 1}
+                            >
+                                <MaterialIcons name="flash-on" size={20} color="rgba(255,255,255,0.4)" />
+                                <Text style={styles.deckLabel}>أكشن</Text>
+                            </TouchableOpacity>
                         </View>
 
-                        {isMyTurn && myPlayer && (
-                            <View style={styles.movesContainer}>
-                                <Text style={styles.movesLabel}>حركات:</Text>
-                                <View style={styles.movesPills}>
-                                    {[...Array(3)].map((_, i) => (
+                        {/* Center Field Circle */}
+                        <View style={styles.centerContent}>
+                            <View style={styles.phaseBadge}>
+                                <Text style={styles.phaseBadgeText}>{phaseText}</Text>
+                            </View>
+
+                            <View style={styles.fieldCircle}>
+                                <View style={styles.fieldCircleInner}>
+                                    <View style={styles.fieldLine} />
+                                    <View style={styles.fieldDot} />
+                                </View>
+                            </View>
+
+                            {/* Moves Indicator */}
+                            {isMyTurn && myPlayer && !isDefensePhase && (
+                                <View style={styles.movesIndicator}>
+                                    {[0, 1, 2].map(i => (
                                         <View
                                             key={i}
                                             style={[
-                                                styles.movePill,
-                                                i < myPlayer.movesRemaining ? styles.movePillActive : styles.movePillInactive
+                                                styles.moveDot,
+                                                i < myPlayer.movesRemaining && styles.moveDotActive
                                             ]}
                                         />
                                     ))}
                                 </View>
-                            </View>
+                            )}
+
+                            {/* Attack Result */}
+                            {lastAttackResult && (
+                                <View style={[
+                                    styles.attackResult,
+                                    lastAttackResult.result === 'goal' && styles.attackResultGoal,
+                                ]}>
+                                    <Text style={styles.attackResultText}>
+                                        {lastAttackResult.result === 'goal'
+                                            ? `هدف! +${lastAttackResult.damage}`
+                                            : 'تصدي!'}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Right Side - Ponto Deck */}
+                        <View style={styles.deckSidebarRight}>
+                            <TouchableOpacity
+                                style={styles.deckCard}
+                                onPress={() => drawCards('ponto', 1)}
+                                disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 1}
+                            >
+                                <MaterialCommunityIcons name="diamond" size={20} color="rgba(255,255,255,0.4)" />
+                                <Text style={styles.deckLabel}>بونتو</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Player Field - Full Width */}
+                    <View style={styles.fieldRow}>
+                        {(myPlayer?.field || [null, null, null, null, null]).map((card, i) =>
+                            renderPlayerSlot(card, i)
                         )}
                     </View>
 
-                    {/* Player Field */}
-                    <View style={styles.fieldRow}>
-                        {(myPlayer?.field || [null, null, null, null, null]).map((card, i) => renderPlayerSlot(card, i))}
-                    </View>
+                    {/* Action Buttons - Full Width */}
+                    <View style={styles.actionButtons}>
+                        {isDefensePhase ? (
+                            <TouchableOpacity style={styles.defenseButton} onPress={endDefense}>
+                                <Ionicons name="shield-checkmark" size={18} color="#FFF" />
+                                <Text style={styles.defenseButtonText}>إنهاء الدفاع</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <>
+                                <TouchableOpacity
+                                    style={[styles.attackButton, (!isMyTurn || (myPlayer?.movesRemaining || 0) < 2) && styles.buttonDisabled]}
+                                    onPress={() => {
+                                        if (selectedCardId && myPlayer) {
+                                            const idx = myPlayer.field.findIndex(c => c?.id === selectedCardId);
+                                            if (idx !== -1) enterAttackMode(idx);
+                                        }
+                                    }}
+                                    disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 2}
+                                >
+                                    <MaterialCommunityIcons name="soccer" size={18} color="#FFF" />
+                                    <Text style={styles.attackButtonText}>هجـــوم</Text>
+                                </TouchableOpacity>
 
-                    {/* Action Controls */}
-                    <View style={styles.actionControls}>
-                        <TouchableOpacity
-                            style={[styles.endTurnButton, !isMyTurn && styles.buttonDisabled]}
-                            onPress={endTurn}
-                            disabled={!isMyTurn}
-                        >
-                            <Text style={styles.endTurnText}>إنهاء الدور</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.attackButton, !isMyTurn && styles.buttonDisabled]}
-                            disabled={!isMyTurn}
-                        >
-                            <MaterialCommunityIcons name="soccer" size={22} color="#FFF" />
-                            <Text style={styles.attackButtonText}>هجوم</Text>
-                        </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.endTurnButton, !isMyTurn && styles.buttonDisabled]}
+                                    onPress={endTurn}
+                                    disabled={!isMyTurn}
+                                >
+                                    <Text style={styles.endTurnText}>إنهاء</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
                     </View>
                 </View>
 
                 {/* HAND AREA */}
                 <View style={styles.handArea}>
+                    <View style={styles.handDragIndicator} />
                     <View style={styles.handHeader}>
                         <Text style={styles.handCount}>كروتك ({myPlayer?.hand.length || 0})</Text>
+                        <TouchableOpacity onPress={() => setShowMenu(true)}>
+                            <Ionicons name="menu" size={20} color={COLORS.primary} />
+                        </TouchableOpacity>
                     </View>
-
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.handScrollContent}
-                    >
-                        {(myPlayer?.hand || []).map((card, index) => renderHandCard(card, index))}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.handScroll}>
+                        {(myPlayer?.hand || []).map(card => renderHandCard(card))}
                     </ScrollView>
                 </View>
+
             </SafeAreaView>
+
+            {/* Menu Modal */}
+            <Modal visible={showMenu} transparent animationType="fade">
+                <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowMenu(false)}>
+                    <View style={styles.menuModal}>
+                        <TouchableOpacity style={styles.menuItem} onPress={handleSurrender}>
+                            <Ionicons name="flag" size={20} color={COLORS.error} />
+                            <Text style={styles.menuItemDanger}>استسلام</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem} onPress={() => setShowMenu(false)}>
+                            <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+                            <Text style={styles.menuItemText}>إغلاق</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Game End Modal */}
+            <Modal visible={!!gameEndInfo} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.gameEndModal}>
+                        <MaterialCommunityIcons
+                            name={gameEndInfo?.winnerId === myPlayer?.odium ? 'trophy' : 'emoticon-sad'}
+                            size={64}
+                            color={gameEndInfo?.winnerId === myPlayer?.odium ? '#FFD700' : COLORS.error}
+                        />
+                        <Text style={styles.gameEndTitle}>
+                            {gameEndInfo?.winnerId === myPlayer?.odium ? 'فوز!' : 'خسارة'}
+                        </Text>
+                        <Text style={styles.gameEndReason}>{gameEndInfo?.reason}</Text>
+                        <TouchableOpacity style={styles.gameEndButton} onPress={onBack}>
+                            <Text style={styles.gameEndButtonText}>خروج</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -299,11 +557,22 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.backgroundDark,
     },
+    backgroundGlow: {
+        position: 'absolute',
+        top: '30%',
+        left: '-10%',
+        width: '120%',
+        height: '40%',
+        backgroundColor: 'rgba(9, 170, 9, 0.05)',
+        borderRadius: 1000,
+        transform: [{ scaleX: 1.5 }],
+    },
     loadingContainer: {
         flex: 1,
         backgroundColor: COLORS.backgroundDark,
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 16,
     },
     loadingText: {
         color: COLORS.textSecondary,
@@ -313,324 +582,587 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    // SCOREBOARD
-    scoreboard: {
-        paddingHorizontal: SPACING.sm,
-        paddingTop: SPACING.sm,
+    // HEADER
+    header: {
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
     },
-    scoreboardInner: {
+    scoreboardContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: COLORS.surfaceDark,
-        borderRadius: BORDER_RADIUS.md,
-        padding: SPACING.sm,
+        backgroundColor: 'rgba(26, 51, 26, 0.8)',
+        borderRadius: 16,
+        padding: 8,
         borderWidth: 1,
-        borderColor: COLORS.cardBorder,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
-    playerScore: {
+    playerSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 12,
+        width: '25%',
     },
-    playerScoreReverse: {
+    playerSectionReverse: {
         flexDirection: 'row-reverse',
     },
+    avatarContainer: {
+        position: 'relative',
+    },
     avatar: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: COLORS.surfaceDarker,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.surfaceLighter,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
+        borderWidth: 2,
     },
     avatarMe: {
         borderColor: COLORS.primary,
     },
     avatarOpponent: {
-        borderColor: '#ef4444',
+        borderColor: 'rgba(239, 68, 68, 0.5)',
     },
-    scoreInfo: {
-        alignItems: 'center',
+    levelBadge: {
+        position: 'absolute',
+        bottom: -4,
+        left: -4,
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: COLORS.surfaceDark,
     },
-    playerLabel: {
-        fontSize: 9,
-        color: COLORS.textSlate,
+    levelBadgeOpponent: {
+        position: 'absolute',
+        bottom: -4,
+        right: -4,
+        backgroundColor: 'rgba(127, 29, 29, 0.8)',
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: COLORS.surfaceDark,
     },
-    scoreValue: {
-        fontSize: 16,
+    levelText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    scoreText: {
+        fontSize: 20,
         fontWeight: 'bold',
         color: COLORS.textPrimary,
     },
-    centerInfo: {
+    timerSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    timerBlock: {
         alignItems: 'center',
     },
-    timerContainer: {
-        backgroundColor: COLORS.surfaceDarker,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: COLORS.cardBorder,
+    timerLabel: {
+        fontSize: 9,
+        color: 'rgba(9, 170, 9, 0.8)',
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
     },
-    timerActive: {
-        borderColor: COLORS.primary,
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    timerLabelGray: {
+        fontSize: 9,
+        color: COLORS.textSlate,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
     },
-    timerText: {
-        fontSize: 14,
+    timerValue: {
+        fontSize: 16,
         fontWeight: 'bold',
         color: COLORS.textPrimary,
         fontFamily: 'monospace',
     },
-    turnText: {
-        fontSize: 9,
-        color: COLORS.textSecondary,
-        marginTop: 2,
+    timerValueActive: {
+        color: COLORS.primary,
+    },
+    timerValueGray: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: COLORS.textSlate,
+        fontFamily: 'monospace',
+    },
+    timerDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        marginHorizontal: 8,
     },
 
-    // GAME AREA
-    gameArea: {
+    // MAIN AREA - Column layout
+    mainArea: {
         flex: 1,
-        paddingTop: SPACING.sm,
+        flexDirection: 'column',
+        paddingHorizontal: 8,
+        paddingVertical: 8,
         justifyContent: 'space-between',
     },
-    fieldRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 6,
-        paddingHorizontal: SPACING.sm,
-        height: 80,
-    },
-    cardSlot: {
-        flex: 1,
-        maxWidth: SLOT_WIDTH,
-        height: '100%',
-        backgroundColor: COLORS.surfaceDark,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-        overflow: 'hidden',
-    },
-    cardBack: {
-        flex: 1,
+
+    // DECK SIDEBARS
+    deckSidebar: {
+        width: 50,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#1e3a1e',
+        gap: 12,
     },
-    cardBackText: {
-        color: 'rgba(255,255,255,0.3)',
-        fontSize: 12,
-        fontWeight: 'bold',
+    deckSidebarLeft: {
+        width: 55,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
     },
-    emptySlot: {
-        flex: 1,
-        maxWidth: SLOT_WIDTH,
-        height: '100%',
-        backgroundColor: 'rgba(255,255,255,0.02)',
-        borderRadius: 6,
+    deckSidebarRight: {
+        width: 55,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+    },
+    deckCard: {
+        width: 48,
+        height: 64,
+        backgroundColor: COLORS.surfaceLighter,
+        borderRadius: 8,
         borderWidth: 1,
-        borderStyle: 'dashed',
         borderColor: 'rgba(255,255,255,0.1)',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    emptySlotInner: {
+    deckLabel: {
+        position: 'absolute',
+        bottom: -14,
+        fontSize: 8,
+        color: COLORS.textSlate,
+        fontWeight: 'bold',
+    },
+
+    // CENTER ZONE
+    centerZone: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+    },
+    centerContent: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    playerSlot: {
-        flex: 1,
-        maxWidth: SLOT_WIDTH,
-        height: '100%',
-        backgroundColor: COLORS.surfaceDark,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: COLORS.cardBorder,
-        overflow: 'hidden',
+
+    // FIELD
+    fieldRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 4,
+        paddingHorizontal: 4,
     },
-    playerSlotSelected: {
+    fieldSlot: {
+        flex: 1,
+        aspectRatio: 2 / 3,
+        backgroundColor: COLORS.surfaceLighter,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fieldSlotSelected: {
         borderColor: COLORS.primary,
         borderWidth: 2,
     },
-    cardImage: {
-        width: '100%',
-        height: '100%',
+    fieldSlotAttacker: {
+        borderColor: COLORS.primary,
+        borderWidth: 2,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 8,
+        elevation: 8,
     },
-    cardContent: {
+    fieldSlotTarget: {
+        borderColor: COLORS.error,
+        borderWidth: 2,
+    },
+    cardBack: {
         flex: 1,
+        width: '100%',
+        backgroundColor: COLORS.surfaceLighter,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    slotStatsBar: {
+    cardBackCircle: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    emptySlotCircle: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    slotCardFilled: {
+        flex: 1,
+        width: '100%',
+    },
+    slotCardImage: {
+        width: '100%',
+        height: '100%',
+    },
+    slotCardOverlay: {
         position: 'absolute',
         bottom: 0,
         width: '100%',
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        backgroundColor: 'rgba(0,0,0,0.8)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         paddingVertical: 2,
-    },
-    statItem: {
-        flexDirection: 'row',
         alignItems: 'center',
-        gap: 2,
     },
-    statText: {
+    slotCardOverlaySelected: {
+        backgroundColor: COLORS.primary,
+    },
+    slotCardStat: {
         fontSize: 8,
         fontWeight: 'bold',
         color: '#FFF',
     },
-
-    // MIDDLE ZONE
-    middleZone: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        gap: 6,
-    },
-    phaseBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    phaseBadgeText: {
-        color: COLORS.primary,
-        fontWeight: 'bold',
-        fontSize: 12,
-    },
-    movesContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    movesLabel: {
-        color: COLORS.textSlate,
-        fontSize: 10,
-    },
-    movesPills: {
-        flexDirection: 'row',
-        gap: 3,
-    },
-    movePill: {
+    attackerPing: {
+        position: 'absolute',
+        top: 4,
+        right: 4,
         width: 8,
         height: 8,
         borderRadius: 4,
-    },
-    movePillActive: {
         backgroundColor: COLORS.primary,
     },
-    movePillInactive: {
-        backgroundColor: '#374151',
-    },
 
-    // ACTION CONTROLS
-    actionControls: {
-        flexDirection: 'row',
-        gap: SPACING.sm,
-        paddingHorizontal: SPACING.md,
-        paddingBottom: SPACING.xs,
-    },
-    endTurnButton: {
-        flex: 1,
-        backgroundColor: COLORS.surfaceDark,
-        paddingVertical: 10,
-        borderRadius: 8,
-        alignItems: 'center',
+    phaseBadge: {
+        position: 'absolute',
+        top: 0,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: COLORS.cardBorder,
+        borderColor: 'rgba(9, 170, 9, 0.2)',
     },
-    buttonDisabled: {
-        opacity: 0.5,
-    },
-    endTurnText: {
-        color: COLORS.textSlate,
+    phaseBadgeText: {
+        color: COLORS.primary,
+        fontSize: 12,
         fontWeight: 'bold',
-        fontSize: 13,
     },
-    attackButton: {
-        flex: 2,
-        flexDirection: 'row',
+    fieldCircle: {
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        borderWidth: 3,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(22, 101, 52, 0.4)',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
-        backgroundColor: '#b91c1c',
-        paddingVertical: 10,
-        borderRadius: 8,
+        overflow: 'hidden',
     },
-    attackButtonText: {
+    fieldCircleInner: {
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fieldLine: {
+        position: 'absolute',
+        width: '100%',
+        height: 2,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    fieldDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+    },
+    movesIndicator: {
+        position: 'absolute',
+        bottom: 8,
+        flexDirection: 'row',
+        gap: 4,
+    },
+    moveDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: COLORS.surfaceLighter,
+    },
+    moveDotActive: {
+        backgroundColor: COLORS.primary,
+    },
+    attackResult: {
+        position: 'absolute',
+        backgroundColor: COLORS.surfaceDark,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: COLORS.info,
+    },
+    attackResultGoal: {
+        backgroundColor: 'rgba(9, 170, 9, 0.3)',
+        borderColor: COLORS.primary,
+    },
+    attackResultText: {
         color: '#FFF',
         fontWeight: 'bold',
         fontSize: 14,
     },
 
+    // ACTION BUTTONS
+    actionButtons: {
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 4,
+        marginTop: 8,
+    },
+    endTurnButton: {
+        flex: 1,
+        backgroundColor: COLORS.surfaceLighter,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        paddingVertical: 10,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    endTurnText: {
+        color: COLORS.textSlate,
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    attackButton: {
+        flex: 2,
+        backgroundColor: COLORS.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    attackButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    defenseButton: {
+        flex: 1,
+        backgroundColor: COLORS.info,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    defenseButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    buttonDisabled: {
+        opacity: 0.5,
+    },
+
     // HAND AREA
     handArea: {
-        height: 140,
-        backgroundColor: COLORS.surfaceDarker,
+        backgroundColor: COLORS.surfaceDark,
         borderTopWidth: 1,
-        borderTopColor: COLORS.cardBorder,
-        paddingVertical: SPACING.xs,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+        paddingTop: 8,
+        paddingBottom: 24,
+    },
+    handDragIndicator: {
+        width: 48,
+        height: 4,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 8,
     },
     handHeader: {
-        paddingHorizontal: SPACING.md,
-        marginBottom: 4,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        marginBottom: 8,
     },
     handCount: {
+        fontSize: 12,
         color: COLORS.textSlate,
-        fontSize: 11,
+        fontWeight: '500',
     },
-    handScrollContent: {
-        paddingHorizontal: SPACING.md,
-        gap: 6,
+    handScroll: {
+        paddingHorizontal: 16,
+        gap: 12,
     },
     handCard: {
-        width: CARD_WIDTH,
-        height: 100,
-        backgroundColor: COLORS.surfaceDark,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: COLORS.cardBorder,
+        width: 88,
+        aspectRatio: 2 / 3,
+        borderRadius: 12,
         overflow: 'hidden',
+        backgroundColor: COLORS.surfaceLighter,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     handCardSelected: {
         borderColor: COLORS.primary,
         borderWidth: 2,
         transform: [{ translateY: -8 }],
     },
-    handCardAction: {
-        borderColor: '#F59E0B',
-    },
-    handCardPonto: {
-        borderColor: '#8B5CF6',
-    },
     handCardImage: {
         width: '100%',
-        height: '70%',
+        height: '100%',
     },
-    handCardContent: {
+    handCardPlaceholder: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    pontoValue: {
-        fontSize: 24,
+    handCardGradient: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'transparent',
+    },
+    positionBadge: {
+        position: 'absolute',
+        top: 4,
+        left: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    positionBadgeText: {
+        color: '#FFF',
+        fontSize: 10,
         fontWeight: 'bold',
-        color: '#8B5CF6',
+    },
+    handCardRating: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#FFF',
     },
     handCardName: {
-        fontSize: 9,
+        position: 'absolute',
+        bottom: 8,
+        left: 8,
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.6)',
+    },
+    handCardActionLabel: {
+        position: 'absolute',
+        bottom: 8,
+        width: '100%',
+        textAlign: 'center',
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: COLORS.warning,
+    },
+    handCardPontoLabel: {
+        position: 'absolute',
+        bottom: 8,
+        width: '100%',
+        textAlign: 'center',
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: COLORS.ponto,
+    },
+    pontoCardValue: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: COLORS.ponto,
+    },
+
+    // MODALS
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    menuModal: {
+        backgroundColor: COLORS.surfaceDark,
+        borderRadius: 16,
+        padding: 16,
+        width: 200,
+        gap: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 10,
+    },
+    menuItemText: {
+        color: COLORS.textPrimary,
+        fontSize: 15,
+    },
+    menuItemDanger: {
+        color: COLORS.error,
+        fontSize: 15,
+    },
+    gameEndModal: {
+        backgroundColor: COLORS.surfaceDark,
+        borderRadius: 20,
+        padding: 24,
+        alignItems: 'center',
+        width: 280,
+        gap: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    gameEndTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: COLORS.textPrimary,
+    },
+    gameEndReason: {
+        fontSize: 14,
         color: COLORS.textSecondary,
         textAlign: 'center',
-        padding: 4,
+    },
+    gameEndButton: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 32,
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginTop: 8,
+    },
+    gameEndButtonText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 16,
     },
 });
 

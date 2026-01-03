@@ -512,6 +512,44 @@ export function setupGameSocket(io: Server) {
             }
         });
 
+        // Draw cards from deck (costs 1 move)
+        socket.on('draw_cards', ({ cardType, count }) => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.drawCards(game, socket.userId!, cardType, count);
+
+            if (result.success) {
+                socket.emit('cards_drawn', {
+                    cardType,
+                    drawnCards: result.drawnCards,
+                });
+
+                io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Auto-end turn if no moves remaining
+                const player = game.player1.odium === socket.userId
+                    ? game.player1
+                    : game.player2;
+
+                if (player && player.movesRemaining <= 0) {
+                    const endSuccess = gameService.endTurn(game, socket.userId!);
+                    if (endSuccess) {
+                        io.to(`game:${game.id}`).emit('game_update', game);
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit
+                        });
+                    }
+                }
+            } else {
+                socket.emit('error', { message: 'لا يمكن سحب كروت', code: 'INVALID_DRAW' });
+            }
+        });
+
         // Swap a card from hand with a card on field (costs 1 move)
         socket.on('swap_cards', ({ handCardId, fieldSlotIndex }) => {
             const game = gameService.getGameByPlayer(socket.userId!);

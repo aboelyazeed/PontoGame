@@ -131,6 +131,7 @@ export interface ClientToServerEvents {
     ready: () => void;
     start_game: (data: { roomId: string }) => void;
     play_card: (data: { cardId: string; slotIndex: number }) => void;
+    draw_cards: (data: { cardType: 'player' | 'action' | 'ponto'; count: number }) => void;
     attack: (data: { attackerSlotIndex: number; defenderSlotIndex: number }) => void;
     flip_card: (data: { slotIndex: number }) => void;
     swap_cards: (data: { handCardId: string; fieldSlotIndex: number }) => void;
@@ -187,6 +188,7 @@ export interface ServerToClientEvents {
 
     // Action Results
     card_played: (data: { playerId: string; card: GameCard; slotIndex: number }) => void;
+    cards_drawn: (data: { cardType: 'player' | 'action' | 'ponto'; drawnCards: GameCard[] }) => void;
     attack_result: (data: {
         attackerId: string;
         defenderId: string;

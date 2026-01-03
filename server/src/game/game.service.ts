@@ -549,6 +549,50 @@ export class GameService {
     }
 
     /**
+     * Draw cards from deck (costs 1 move per draw)
+     * PRD: Player can draw 2 player cards or 1 ponto card per turn
+     */
+    drawCards(
+        gameState: GameState,
+        odium: string,
+        cardType: 'player' | 'action' | 'ponto',
+        count: number
+    ): { success: boolean; drawnCards: GameCard[] } {
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return { success: false, drawnCards: [] };
+        if (gameState.currentTurn !== odium) return { success: false, drawnCards: [] };
+        if (player.movesRemaining < 1) return { success: false, drawnCards: [] };
+
+        const drawnCards: GameCard[] = [];
+        let sourcePool: GameCard[] = [];
+
+        switch (cardType) {
+            case 'player':
+                sourcePool = [...PLAYER_CARDS];
+                break;
+            case 'action':
+                sourcePool = [...ACTION_CARDS];
+                break;
+            case 'ponto':
+                sourcePool = [...PONTO_CARDS];
+                break;
+        }
+
+        for (let i = 0; i < count && sourcePool.length > 0; i++) {
+            const idx = Math.floor(Math.random() * sourcePool.length);
+            const drawn = { ...sourcePool.splice(idx, 1)[0] };
+            drawn.id = `${drawn.id}_drawn_${Date.now()}_${i}`;
+            player.hand.push(drawn);
+            drawnCards.push(drawn);
+        }
+
+        // Deduct move (1 move for drawing)
+        player.movesRemaining -= 1;
+
+        return { success: true, drawnCards };
+    }
+
+    /**
      * Flip a face-down card on your field to reveal it (costs 1 move)
      */
     flipCard(gameState: GameState, odium: string, slotIndex: number): boolean {
