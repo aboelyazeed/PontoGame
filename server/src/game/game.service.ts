@@ -288,7 +288,8 @@ export class GameService {
         return Array.from(activeRooms.values())
             .filter(room => room.status === 'waiting' && !room.player2)
             .map(room => {
-                const { password, ...safeRoom } = room as any;
+                // Remove sensitive data from public listing
+                const { password, roomCode, ...safeRoom } = room as any;
                 return safeRoom;
             });
     }
