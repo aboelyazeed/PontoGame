@@ -133,7 +133,7 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
                 ...prev,
                 gameState,
                 isMyTurn: checkIsMyTurn(gameState),
-                isDefensePhase: gameState.turnPhase === 'defense',
+                isDefensePhase: gameState.turnPhase === 'defense' && checkIsMyTurn(gameState),
                 matchTimerSeconds: gameState.matchTimeLimit || 1200,
                 timerSeconds: gameState.turnTimeLimit || 90,
             }));
@@ -146,7 +146,7 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
                 ...prev,
                 gameState,
                 isMyTurn: checkIsMyTurn(gameState),
-                isDefensePhase: gameState.turnPhase === 'defense',
+                isDefensePhase: gameState.turnPhase === 'defense' && checkIsMyTurn(gameState),
             }));
         });
 
