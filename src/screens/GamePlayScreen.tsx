@@ -105,9 +105,11 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         swapCards,
         useActionCard,
         summonLegendary,
-        enterAttackMode,
-        cancelAttackMode,
-        attack,
+        // New Attack/Defense Flow
+        revealAttacker,
+        endAttackPhase,
+        revealDefender,
+        acceptGoal,
         endDefense,
         endTurn,
         surrender,
@@ -216,7 +218,6 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     const handleFieldCardPress = (card: GameCard | null, slotIndex: number, isOpponent: boolean) => {
         // Block all interactions during draw phase
         if (gameState?.turnPhase === 'draw') return;
-        if (!isMyTurn && !isDefensePhase) return;
 
         // Handle Action Targeting
         if (actionTargetMode !== 'none') {
@@ -224,19 +225,35 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
             return;
         }
 
-        if (attackMode && isOpponent) {
-            attack(slotIndex);
+        // During play/attack phase - tap own face-down card to reveal as attacker
+        if (gameState?.turnPhase === 'play' || gameState?.turnPhase === 'attack') {
+            if (!isMyTurn) return;
+            if (isOpponent) return; // Can't reveal opponent's cards
+
+            if (card && !card.isRevealed) {
+                // Can only reveal attackers (FW or MF)
+                if (card.position === 'FW' || card.position === 'MF') {
+                    revealAttacker(slotIndex);
+                }
+            } else if (card) {
+                // Just select revealed cards
+                selectCard(card.id, false);
+            }
             return;
         }
 
-        if (!isOpponent && card && !attackMode) {
-            if (selectedCardId === card.id) {
-                if (myPlayer && myPlayer.movesRemaining >= 2) {
-                    enterAttackMode(slotIndex);
+        // During defense phase - tap own face-down card to reveal as defender
+        if (gameState?.turnPhase === 'defense') {
+            if (!isDefensePhase) return;
+            if (isOpponent) return; // Can't reveal opponent's cards
+
+            if (card && !card.isRevealed) {
+                // Can only reveal defenders (DF or GK)
+                if (card.position === 'DF' || card.position === 'GK') {
+                    revealDefender(slotIndex);
                 }
-            } else {
-                selectCard(card.id, false);
             }
+            return;
         }
     };
 
@@ -411,10 +428,11 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     }
 
     const phaseText = instructionText ? instructionText
-        : attackMode ? 'اختر الهدف'
-            : isDefensePhase ? 'دافع!'
-                : isMyTurn ? 'دورك - اللعب'
-                    : 'دور المنافس';
+        : gameState?.turnPhase === 'draw' ? (isMyTurn ? 'اسحب كرتين' : 'الخصم يسحب')
+            : gameState?.turnPhase === 'attack' ? (isMyTurn ? 'اكشف مهاجم آخر أو أنهِ الهجوم' : 'الخصم يهاجم')
+                : isDefensePhase ? 'دافع!'
+                    : isMyTurn ? 'دورك - اللعب'
+                        : 'دور المنافس';
 
     return (
         <View style={styles.container}>
@@ -527,7 +545,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                             </View>
 
                             {/* Moves Indicator */}
-                            {isMyTurn && myPlayer && !isDefensePhase && (
+                            {isMyTurn && myPlayer && gameState?.turnPhase === 'play' && (
                                 <View style={styles.movesIndicator}>
                                     {[0, 1, 2].map(i => (
                                         <View
@@ -538,6 +556,21 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                                             ]}
                                         />
                                     ))}
+                                </View>
+                            )}
+
+                            {/* Attack/Defense Battle Display */}
+                            {(gameState?.turnPhase === 'attack' || gameState?.turnPhase === 'defense') && pendingAttack && (
+                                <View style={styles.battleDisplay}>
+                                    <View style={styles.battleSide}>
+                                        <Text style={styles.battleLabel}>هجوم</Text>
+                                        <Text style={styles.battleValue}>{pendingAttack.attackSum}</Text>
+                                    </View>
+                                    <Text style={styles.battleVs}>VS</Text>
+                                    <View style={styles.battleSide}>
+                                        <Text style={styles.battleLabel}>دفاع</Text>
+                                        <Text style={styles.battleValue}>{pendingAttack.defenseSum}</Text>
+                                    </View>
                                 </View>
                             )}
 
@@ -578,35 +611,47 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
 
                     {/* Action Buttons - Full Width */}
                     <View style={styles.actionButtons}>
-                        {isDefensePhase ? (
-                            <TouchableOpacity style={styles.defenseButton} onPress={endDefense}>
-                                <Ionicons name="shield-checkmark" size={18} color="#FFF" />
-                                <Text style={styles.defenseButtonText}>إنهاء الدفاع</Text>
-                            </TouchableOpacity>
-                        ) : (
+                        {/* Defense Phase Buttons */}
+                        {isDefensePhase && (
                             <>
                                 <TouchableOpacity
-                                    style={[styles.attackButton, (!isMyTurn || gameState?.turnPhase === 'draw' || (myPlayer?.movesRemaining || 0) < 2) && styles.buttonDisabled]}
-                                    onPress={() => {
-                                        if (selectedCardId && myPlayer) {
-                                            const idx = myPlayer.field.findIndex(c => c?.id === selectedCardId);
-                                            if (idx !== -1) enterAttackMode(idx);
-                                        }
-                                    }}
-                                    disabled={!isMyTurn || gameState?.turnPhase === 'draw' || (myPlayer?.movesRemaining || 0) < 2}
+                                    style={styles.acceptGoalButton}
+                                    onPress={acceptGoal}
                                 >
-                                    <MaterialCommunityIcons name="soccer" size={18} color="#FFF" />
-                                    <Text style={styles.attackButtonText}>هجـــوم</Text>
+                                    <Ionicons name="football-outline" size={18} color="#FFF" />
+                                    <Text style={styles.acceptGoalText}>قبول الهدف</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    style={[styles.endTurnButton, (!isMyTurn || gameState?.turnPhase === 'draw') && styles.buttonDisabled]}
-                                    onPress={endTurn}
-                                    disabled={!isMyTurn || gameState?.turnPhase === 'draw'}
+                                    style={styles.defenseButton}
+                                    onPress={endDefense}
                                 >
-                                    <Text style={styles.endTurnText}>إنهاء</Text>
+                                    <Ionicons name="shield-checkmark" size={18} color="#FFF" />
+                                    <Text style={styles.defenseButtonText}>إنهاء الدفاع</Text>
                                 </TouchableOpacity>
                             </>
+                        )}
+
+                        {/* Attack Phase Button */}
+                        {gameState?.turnPhase === 'attack' && isMyTurn && (
+                            <TouchableOpacity
+                                style={styles.endAttackButton}
+                                onPress={endAttackPhase}
+                            >
+                                <MaterialCommunityIcons name="sword" size={18} color="#FFF" />
+                                <Text style={styles.endAttackText}>إنهاء الهجوم</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Play Phase Buttons */}
+                        {gameState?.turnPhase === 'play' && (
+                            <TouchableOpacity
+                                style={[styles.endTurnButton, !isMyTurn && styles.buttonDisabled]}
+                                onPress={endTurn}
+                                disabled={!isMyTurn}
+                            >
+                                <Text style={styles.endTurnText}>إنهاء الدور</Text>
+                            </TouchableOpacity>
                         )}
                     </View>
                 </View>
@@ -1085,6 +1130,35 @@ const styles = StyleSheet.create({
     moveDotActive: {
         backgroundColor: COLORS.primary,
     },
+    battleDisplay: {
+        position: 'absolute',
+        bottom: -40,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        gap: 12,
+    },
+    battleSide: {
+        alignItems: 'center',
+    },
+    battleLabel: {
+        color: COLORS.textSecondary,
+        fontSize: 10,
+        fontWeight: '600',
+    },
+    battleValue: {
+        color: '#FFF',
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    battleVs: {
+        color: COLORS.warning,
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
     attackResult: {
         position: 'absolute',
         backgroundColor: COLORS.surfaceDark,
@@ -1151,6 +1225,36 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     defenseButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    acceptGoalButton: {
+        flex: 1,
+        backgroundColor: COLORS.error,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    acceptGoalText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    endAttackButton: {
+        flex: 1,
+        backgroundColor: COLORS.warning,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    endAttackText: {
         color: '#FFF',
         fontSize: 14,
         fontWeight: 'bold',

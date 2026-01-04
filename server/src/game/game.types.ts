@@ -70,14 +70,14 @@ export interface GameState {
     player1: PlayerState;
     player2: PlayerState | null;
 
-    // Attack/Defense phase tracking (PRD)
+    // Attack/Defense phase tracking
     pendingAttack?: {
-        attackerId: string;
-        attackerSlotIndex: number;
-        defenderSlotIndex: number;
-        attackSum: number;      // Base ATK + Ponto bonuses
-        defenseSum: number;     // Base DEF + Action bonuses
-        defenderMovesRemaining: number; // Defender gets 3 moves
+        attackerId: string;              // Player who initiated attack
+        attackerSlots: number[];         // Slots of revealed attackers (max 2)
+        attackSum: number;               // Sum of attacker attacks + Ponto
+        pontoCard?: GameCard;            // The drawn Ponto card (visible to both)
+        defenseSum: number;              // Accumulated defense from revealed defenders
+        defenderSlots: number[];         // Slots of revealed defenders (max 3)
     };
 
     // Match timer (PRD: 20 minutes)
@@ -136,7 +136,14 @@ export interface ClientToServerEvents {
     draw_from_deck: (data: { deckType: 'player' | 'action' }) => void;
     play_card: (data: { cardId: string; slotIndex: number }) => void;
     draw_cards: (data: { cardType: 'player' | 'action' | 'ponto'; count: number }) => void;
-    attack: (data: { attackerSlotIndex: number; defenderSlotIndex: number }) => void;
+
+    // New Attack/Defense Flow
+    reveal_attacker: (data: { slotIndex: number }) => void;
+    end_attack_phase: () => void;
+    reveal_defender: (data: { slotIndex: number }) => void;
+    accept_goal: () => void;
+    end_defense: () => void;
+
     flip_card: (data: { slotIndex: number }) => void;
     swap_cards: (data: { handCardId: string; fieldSlotIndex: number }) => void;
     use_action_card: (data: {
@@ -151,7 +158,6 @@ export interface ClientToServerEvents {
         discardCardIds: [string, string];
         fieldSlotIndex: number;
     }) => void;
-    end_defense: () => void;
     end_turn: () => void;
 
     // Chat
@@ -194,17 +200,18 @@ export interface ServerToClientEvents {
     card_played: (data: { playerId: string; card: GameCard; slotIndex: number }) => void;
     cards_drawn: (data: { cardType: 'player' | 'action' | 'ponto'; drawnCards: GameCard[] }) => void;
     card_drawn: (data: { cardType: 'player' | 'action'; drawnCard: GameCard; drawsRemaining: number }) => void;
-    attack_result: (data: {
-        attackerId: string;
-        defenderId: string;
-        attackerCard: GameCard;
-        defenderCard: GameCard;
-        result: 'win' | 'lose' | 'draw';
-        damage: number;
-    }) => void;
+
+    // New Attack/Defense Flow Events
+    attacker_revealed: (data: { playerId: string; slotIndex: number; pontoCard?: GameCard; attackSum?: number }) => void;
+    defense_phase_started: (data: { attackSum: number; defenderId: string }) => void;
+    defender_revealed: (data: { playerId: string; slotIndex: number; defenseSum?: number }) => void;
+    goal_scored: (data: { scorerId?: string }) => void;
+    attack_resolved: (data: { result: 'goal' | 'blocked'; scorerId?: string }) => void;
+
+    action_card_used: (data: { playerId: string; cardId: string; drawnCards?: GameCard[]; varResult?: number }) => void;
 
     // Game End
-    game_end: (data: { winnerId: string; reason: string }) => void;
+    game_end: (data: { winnerId: string; reason: string; winReason?: string }) => void;
 
     // Errors
     error: (data: { message: string; code: string }) => void;

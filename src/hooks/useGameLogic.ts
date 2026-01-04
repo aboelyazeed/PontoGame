@@ -303,39 +303,22 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         socketService.emit('draw_from_deck', { deckType });
     }, []);
 
-    // Attack flow
-    const enterAttackMode = useCallback((attackerSlotIndex: number) => {
-        setState(prev => ({
-            ...prev,
-            attackMode: true,
-            selectedAttackerSlot: attackerSlotIndex,
-            selectedCardId: null,
-            selectedFromHand: false,
-        }));
+    // NEW ATTACK/DEFENSE FLOW
+    const revealAttacker = useCallback((slotIndex: number) => {
+        socketService.emit('reveal_attacker', { slotIndex });
     }, []);
 
-    const cancelAttackMode = useCallback(() => {
-        setState(prev => ({
-            ...prev,
-            attackMode: false,
-            selectedAttackerSlot: null,
-        }));
+    const endAttackPhase = useCallback(() => {
+        socketService.emit('end_attack_phase');
     }, []);
 
-    const attack = useCallback((defenderSlotIndex: number) => {
-        if (state.selectedAttackerSlot === null) return;
+    const revealDefender = useCallback((slotIndex: number) => {
+        socketService.emit('reveal_defender', { slotIndex });
+    }, []);
 
-        socketService.emit('attack', {
-            attackerSlotIndex: state.selectedAttackerSlot,
-            defenderSlotIndex,
-        });
-
-        setState(prev => ({
-            ...prev,
-            attackMode: false,
-            selectedAttackerSlot: null,
-        }));
-    }, [state.selectedAttackerSlot]);
+    const acceptGoal = useCallback(() => {
+        socketService.emit('accept_goal');
+    }, []);
 
     const endDefense = useCallback(() => {
         socketService.emit('end_defense');
@@ -378,9 +361,12 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         swapCards,
         useActionCard,
         summonLegendary,
-        enterAttackMode,
-        cancelAttackMode,
-        attack,
+
+        // New Attack/Defense Flow
+        revealAttacker,
+        endAttackPhase,
+        revealDefender,
+        acceptGoal,
         endDefense,
         endTurn,
         surrender,

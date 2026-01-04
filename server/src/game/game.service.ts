@@ -747,7 +747,7 @@ export class GameService {
                     return { success: false, message: 'يستخدم فقط في الدفاع' };
                 }
                 gameState.pendingAttack.defenseSum += 2;
-                gameState.pendingAttack.defenderMovesRemaining -= 1;
+                player.movesRemaining -= 1;
                 break;
 
             case 'mercato': // ميركاتو: Draw 2 player cards
@@ -845,160 +845,208 @@ export class GameService {
     }
 
     /**
-     * Declare attack - costs 2 moves, sets up pending attack and switches to defense phase
-     * Defender then gets 3 moves to respond before resolution
+     * Draw a random Ponto card
      */
-    declareAttack(
-        gameState: GameState,
-        attackerOdium: string,
-        attackerSlotIndex: number,
-        defenderSlotIndex: number
-    ): { success: boolean; message?: string } {
-        const attacker = this.getPlayer(gameState, attackerOdium);
-        const defender = this.getOpponent(gameState, attackerOdium);
-
-        if (!attacker || !defender) return { success: false, message: 'Invalid players' };
-        if (gameState.currentTurn !== attackerOdium) return { success: false, message: 'Not your turn' };
-        if (gameState.turnPhase === 'defense') return { success: false, message: 'Already in defense phase' };
-
-        // Attack costs 2 moves per PRD
-        if (attacker.movesRemaining < 2) return { success: false, message: 'Not enough moves (need 2)' };
-
-        const attackerCard = attacker.field[attackerSlotIndex];
-        if (!attackerCard) return { success: false, message: 'No attacker card in slot' };
-
-        // Get initial defense value
-        const defenderCard = defender.field[defenderSlotIndex];
-        const baseDefense = defenderCard?.defense || 0;
-
-        // Set up pending attack
-        gameState.pendingAttack = {
-            attackerId: attackerOdium,
-            attackerSlotIndex,
-            defenderSlotIndex,
-            attackSum: attackerCard.attack || 0,
-            defenseSum: baseDefense,
-            defenderMovesRemaining: 3, // Defender gets 3 defensive moves
+    drawPontoCard(): GameCard {
+        const template = PONTO_CARDS[Math.floor(Math.random() * PONTO_CARDS.length)];
+        return {
+            ...template,
+            id: uuidv4(),
         };
+    }
 
-        // Deduct 2 moves from attacker
-        attacker.movesRemaining -= 2;
+    // ========================================
+    // NEW ATTACK/DEFENSE SYSTEM
+    // ========================================
 
-        // Switch to defense phase - turn goes to defender
+    /**
+     * Reveal a face-down attacker on your field to start/continue an attack
+     * First reveal: auto-draws Ponto card
+     * Costs 1 move per attacker (max 2 attackers with 3 moves)
+     */
+    revealAttacker(
+        gameState: GameState,
+        odium: string,
+        slotIndex: number
+    ): { success: boolean; message?: string; pontoCard?: GameCard; attackSum?: number } {
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return { success: false, message: 'لاعب غير موجود' };
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        if (gameState.turnPhase === 'defense') return { success: false, message: 'أنت في مرحلة الدفاع' };
+        if (gameState.turnPhase === 'draw') return { success: false, message: 'يجب سحب الكروت أولاً' };
+        if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
+
+        const card = player.field[slotIndex];
+        if (!card) return { success: false, message: 'لا يوجد كرت في هذا المكان' };
+        if (card.isRevealed) return { success: false, message: 'الكرت مكشوف بالفعل' };
+        if (card.position !== 'FW' && card.position !== 'MF') {
+            return { success: false, message: 'يجب أن يكون الكرت مهاجم (FW أو MF)' };
+        }
+
+        // Reveal the card
+        card.isRevealed = true;
+        player.movesRemaining -= 1;
+
+        // Set phase to attack
+        gameState.turnPhase = 'attack';
+
+        // First attacker - create pending attack and draw Ponto
+        if (!gameState.pendingAttack) {
+            const pontoCard = this.drawPontoCard();
+
+            gameState.pendingAttack = {
+                attackerId: odium,
+                attackerSlots: [slotIndex],
+                attackSum: (card.attack || 0) + (pontoCard.attack || 0),
+                pontoCard: pontoCard,
+                defenseSum: 0,
+                defenderSlots: [],
+            };
+
+            return {
+                success: true,
+                pontoCard: pontoCard,
+                attackSum: gameState.pendingAttack.attackSum
+            };
+        }
+
+        // Additional attacker - just add to attack sum
+        if (gameState.pendingAttack.attackerSlots.length >= 2) {
+            return { success: false, message: 'حد أقصى مهاجمين اثنين' };
+        }
+
+        gameState.pendingAttack.attackerSlots.push(slotIndex);
+        gameState.pendingAttack.attackSum += (card.attack || 0);
+
+        return {
+            success: true,
+            attackSum: gameState.pendingAttack.attackSum
+        };
+    }
+
+    /**
+     * End attack phase and switch to defense phase (FREE - no move cost)
+     * Defender will get 3 moves to respond
+     */
+    endAttackPhase(
+        gameState: GameState,
+        odium: string
+    ): { success: boolean; message?: string } {
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        if (gameState.turnPhase !== 'attack') return { success: false, message: 'لست في مرحلة الهجوم' };
+        if (!gameState.pendingAttack) return { success: false, message: 'لم يتم الكشف عن مهاجم' };
+
+        const defender = this.getOpponent(gameState, odium);
+        if (!defender) return { success: false, message: 'لا يوجد خصم' };
+
+        // Switch to defense phase
         gameState.turnPhase = 'defense';
         gameState.currentTurn = defender.odium;
+        defender.movesRemaining = 3; // Defender gets 3 moves
         gameState.turnStartTime = Date.now();
 
         return { success: true };
     }
 
     /**
-     * Defender uses a defense move (play action card to boost defense, etc.)
-     * Costs 1 move from defender's 3 defense moves
+     * Reveal a face-down defender on your field to add to defense
+     * Costs 1 move (max 3 defenders with 3 moves)
      */
-    useDefenseMove(
+    revealDefender(
         gameState: GameState,
-        defenderOdium: string,
-        defenseBonus: number = 0
-    ): { success: boolean; message?: string } {
-        if (!gameState.pendingAttack) return { success: false, message: 'No pending attack' };
-        if (gameState.turnPhase !== 'defense') return { success: false, message: 'Not in defense phase' };
-        if (gameState.currentTurn !== defenderOdium) return { success: false, message: 'Not your turn to defend' };
-        if (gameState.pendingAttack.defenderMovesRemaining <= 0) return { success: false, message: 'No defense moves left' };
+        odium: string,
+        slotIndex: number
+    ): { success: boolean; message?: string; defenseSum?: number } {
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return { success: false, message: 'لاعب غير موجود' };
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        if (gameState.turnPhase !== 'defense') return { success: false, message: 'لست في مرحلة الدفاع' };
+        if (!gameState.pendingAttack) return { success: false, message: 'لا يوجد هجوم معلق' };
+        if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
 
-        // Add defense bonus (from action cards like كتف قانوني)
-        gameState.pendingAttack.defenseSum += defenseBonus;
-        gameState.pendingAttack.defenderMovesRemaining -= 1;
+        const card = player.field[slotIndex];
+        if (!card) return { success: false, message: 'لا يوجد كرت في هذا المكان' };
+        if (card.isRevealed) return { success: false, message: 'الكرت مكشوف بالفعل' };
+        if (card.position !== 'DF' && card.position !== 'GK') {
+            return { success: false, message: 'يجب أن يكون الكرت مدافع (DF أو GK)' };
+        }
 
-        return { success: true };
+        // Reveal the card
+        card.isRevealed = true;
+        player.movesRemaining -= 1;
+
+        // Add to defense sum
+        gameState.pendingAttack.defenderSlots.push(slotIndex);
+        gameState.pendingAttack.defenseSum += (card.defense || 0);
+
+        return {
+            success: true,
+            defenseSum: gameState.pendingAttack.defenseSum
+        };
     }
 
     /**
-     * End defense phase and resolve the attack
-     * Called when defender ends defense or runs out of moves
+     * Defender accepts the goal (can't or won't defend)
+     * Attacker scores +1 goal, turn ends
+     */
+    acceptGoal(
+        gameState: GameState,
+        odium: string
+    ): { success: boolean; message?: string; scorerId?: string } {
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        if (gameState.turnPhase !== 'defense') return { success: false, message: 'لست في مرحلة الدفاع' };
+        if (!gameState.pendingAttack) return { success: false, message: 'لا يوجد هجوم معلق' };
+
+        const attacker = this.getPlayer(gameState, gameState.pendingAttack.attackerId);
+        if (!attacker) return { success: false, message: 'خطأ في اللاعب المهاجم' };
+
+        // Attacker scores +1 goal
+        attacker.score += 1;
+
+        // Clear pending attack
+        const attackerId = gameState.pendingAttack.attackerId;
+        gameState.pendingAttack = undefined;
+
+        // End turn - switch to defender (who now starts their draw phase)
+        this.endTurn(gameState, odium);
+
+        return { success: true, scorerId: attackerId };
+    }
+
+    /**
+     * Resolve the attack (called when defender ends defense)
+     * Compare attackSum vs defenseSum
      */
     resolveAttack(
-        gameState: GameState
-    ): { success: boolean; result?: 'goal' | 'blocked' | 'draw'; damage?: number } {
+        gameState: GameState,
+        odium: string
+    ): { success: boolean; result?: 'goal' | 'blocked'; scorerId?: string } {
+        if (gameState.currentTurn !== odium) return { success: false };
+        if (gameState.turnPhase !== 'defense') return { success: false };
         if (!gameState.pendingAttack) return { success: false };
 
-        const { attackerId, attackerSlotIndex, defenderSlotIndex, attackSum, defenseSum } = gameState.pendingAttack;
-
+        const { attackerId, attackSum, defenseSum } = gameState.pendingAttack;
         const attacker = this.getPlayer(gameState, attackerId);
-        const defender = this.getOpponent(gameState, attackerId);
+        if (!attacker) return { success: false };
 
-        if (!attacker || !defender) return { success: false };
-
-        const attackerCard = attacker.field[attackerSlotIndex];
-        const defenderCard = defender.field[defenderSlotIndex];
-
-        let result: 'goal' | 'blocked' | 'draw';
-        let damage = 0;
+        let result: 'goal' | 'blocked';
 
         if (attackSum > defenseSum) {
+            // Attack succeeds - goal!
             result = 'goal';
-            damage = attackSum - defenseSum;
-            attacker.score += damage;
-
-            // Remove defender card if it exists
-            if (defenderCard) {
-                defender.field[defenderSlotIndex] = null;
-            }
-        } else if (attackSum < defenseSum) {
-            result = 'blocked';
-            // Attacker card removed
-            if (attackerCard) {
-                attacker.field[attackerSlotIndex] = null;
-            }
+            attacker.score += 1;
         } else {
-            result = 'draw';
-            // Both removed
-            if (attackerCard) {
-                attacker.field[attackerSlotIndex] = null;
-            }
-            if (defenderCard) {
-                defender.field[defenderSlotIndex] = null;
-            }
+            // Defense successful - blocked
+            result = 'blocked';
         }
 
         // Clear pending attack
         gameState.pendingAttack = undefined;
 
-        // Return turn to attacker (their turn continues if they have moves)
-        gameState.currentTurn = attackerId;
-        gameState.turnPhase = 'play';
+        // End turn - switch to defender (who now starts their draw phase)
+        this.endTurn(gameState, odium);
 
-        return { success: true, result, damage };
-    }
-
-    /**
-     * Legacy attack function - resolves immediately (for backward compatibility)
-     * TODO: Remove once defense phase is fully implemented
-     */
-    attack(
-        gameState: GameState,
-        attackerOdium: string,
-        attackerSlotIndex: number,
-        defenderSlotIndex: number
-    ): { success: boolean; result?: 'win' | 'lose' | 'draw'; damage?: number } {
-        // Use new declare + resolve flow
-        const declareResult = this.declareAttack(gameState, attackerOdium, attackerSlotIndex, defenderSlotIndex);
-        if (!declareResult.success) return { success: false };
-
-        // Immediately resolve (no defense phase for now)
-        const resolveResult = this.resolveAttack(gameState);
-
-        // Map new result types to old
-        let legacyResult: 'win' | 'lose' | 'draw' | undefined;
-        if (resolveResult.result === 'goal') legacyResult = 'win';
-        else if (resolveResult.result === 'blocked') legacyResult = 'lose';
-        else if (resolveResult.result === 'draw') legacyResult = 'draw';
-
-        return {
-            success: resolveResult.success,
-            result: legacyResult,
-            damage: resolveResult.damage
-        };
+        return { success: true, result, scorerId: result === 'goal' ? attackerId : undefined };
     }
 
     endTurn(gameState: GameState, odium: string): boolean {

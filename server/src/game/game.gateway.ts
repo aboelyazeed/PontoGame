@@ -735,69 +735,120 @@ export function setupGameSocket(io: Server) {
             }
         });
 
-        socket.on('attack', ({ attackerSlotIndex, defenderSlotIndex }) => {
+        // ========================================
+        // NEW ATTACK/DEFENSE FLOW
+        // ========================================
+
+        // Reveal a face-down attacker on your field
+        socket.on('reveal_attacker', ({ slotIndex }) => {
             const game = gameService.getGameByPlayer(socket.userId!);
             if (!game) {
                 socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
                 return;
             }
 
-            const attacker = game.player1.odium === socket.userId
-                ? game.player1
-                : game.player2;
-            const defender = game.player1.odium === socket.userId
-                ? game.player2
-                : game.player1;
-
-            const attackerCard = attacker?.field[attackerSlotIndex];
-            const defenderCard = defender?.field[defenderSlotIndex];
-
-            const result = gameService.attack(
-                game,
-                socket.userId!,
-                attackerSlotIndex,
-                defenderSlotIndex
-            );
+            const result = gameService.revealAttacker(game, socket.userId!, slotIndex);
 
             if (result.success) {
-                io.to(`game:${game.id}`).emit('attack_result', {
-                    attackerId: socket.userId!,
-                    defenderId: defender!.odium,
-                    attackerCard: attackerCard!,
-                    defenderCard: defenderCard || {} as any,
-                    result: result.result!,
-                    damage: result.damage || 0,
+                io.to(`game:${game.id}`).emit('attacker_revealed', {
+                    playerId: socket.userId!,
+                    slotIndex,
+                    pontoCard: result.pontoCard,
+                    attackSum: result.attackSum,
                 });
-
                 io.to(`game:${game.id}`).emit('game_update', game);
-
-                // Check win condition (e.g., score >= 5)
-                const WINNING_SCORE = 5;
-                if (attacker!.score >= WINNING_SCORE) {
-                    gameService.endGame(game, socket.userId!, 'وصل للنتيجة المطلوبة');
-                    io.to(`game:${game.id}`).emit('game_end', {
-                        winnerId: socket.userId!,
-                        reason: 'فوز بالنقاط',
-                    });
-                } else {
-                    // Auto-end turn if no moves remaining (attack costs 2 so often ends turn)
-                    if (attacker!.movesRemaining <= 0) {
-                        const endSuccess = gameService.endTurn(game, socket.userId!);
-                        if (endSuccess) {
-                            io.to(`game:${game.id}`).emit('game_update', game);
-                            io.to(`game:${game.id}`).emit('turn_start', {
-                                playerId: game.currentTurn,
-                                timeLimit: game.turnTimeLimit
-                            });
-                        }
-                    }
-                }
             } else {
-                socket.emit('error', { message: 'هجوم غير صالح', code: 'INVALID_ATTACK' });
+                socket.emit('error', { message: result.message || 'خطأ في الكشف', code: 'INVALID_REVEAL' });
             }
         });
 
-        // Defender ends defense phase - resolves the attack
+        // End attack phase - switch to defense
+        socket.on('end_attack_phase', () => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.endAttackPhase(game, socket.userId!);
+
+            if (result.success) {
+                io.to(`game:${game.id}`).emit('defense_phase_started', {
+                    attackSum: game.pendingAttack?.attackSum || 0,
+                    defenderId: game.currentTurn,
+                });
+                io.to(`game:${game.id}`).emit('game_update', game);
+                io.to(`game:${game.id}`).emit('turn_start', {
+                    playerId: game.currentTurn,
+                    timeLimit: game.turnTimeLimit
+                });
+            } else {
+                socket.emit('error', { message: result.message || 'خطأ', code: 'INVALID_END_ATTACK' });
+            }
+        });
+
+        // Reveal a face-down defender on your field
+        socket.on('reveal_defender', ({ slotIndex }) => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.revealDefender(game, socket.userId!, slotIndex);
+
+            if (result.success) {
+                io.to(`game:${game.id}`).emit('defender_revealed', {
+                    playerId: socket.userId!,
+                    slotIndex,
+                    defenseSum: result.defenseSum,
+                });
+                io.to(`game:${game.id}`).emit('game_update', game);
+            } else {
+                socket.emit('error', { message: result.message || 'خطأ في الكشف', code: 'INVALID_REVEAL' });
+            }
+        });
+
+        // Defender accepts the goal
+        socket.on('accept_goal', () => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.acceptGoal(game, socket.userId!);
+
+            if (result.success) {
+                io.to(`game:${game.id}`).emit('goal_scored', {
+                    scorerId: result.scorerId,
+                });
+                io.to(`game:${game.id}`).emit('game_update', game);
+
+                // Check win condition
+                const scorer = result.scorerId
+                    ? (game.player1.odium === result.scorerId ? game.player1 : game.player2)
+                    : null;
+
+                const WINNING_SCORE = 5;
+                if (scorer && scorer.score >= WINNING_SCORE) {
+                    gameService.endGame(game, scorer.odium, 'وصل للنتيجة المطلوبة');
+                    io.to(`game:${game.id}`).emit('game_end', {
+                        winnerId: scorer.odium,
+                        reason: 'فوز بالنقاط',
+                    });
+                } else {
+                    io.to(`game:${game.id}`).emit('turn_start', {
+                        playerId: game.currentTurn,
+                        timeLimit: game.turnTimeLimit
+                    });
+                }
+            } else {
+                socket.emit('error', { message: result.message || 'خطأ', code: 'INVALID_ACCEPT' });
+            }
+        });
+
+        // Defender ends defense phase - resolve attack
         socket.on('end_defense', () => {
             const game = gameService.getGameByPlayer(socket.userId!);
             if (!game) {
@@ -805,44 +856,35 @@ export function setupGameSocket(io: Server) {
                 return;
             }
 
-            if (game.turnPhase !== 'defense') {
-                socket.emit('error', { message: 'ليس في مرحلة الدفاع', code: 'NOT_DEFENSE_PHASE' });
-                return;
-            }
-
-            // Capture attacker ID before resolving (resolveAttack clears pendingAttack)
-            const attackerId = game.pendingAttack?.attackerId;
-
-            // Resolve the pending attack
-            const result = gameService.resolveAttack(game);
+            const result = gameService.resolveAttack(game, socket.userId!);
 
             if (result.success) {
-                io.to(`game:${game.id}`).emit('attack_result', {
+                io.to(`game:${game.id}`).emit('attack_resolved', {
                     result: result.result,
-                    damage: result.damage || 0,
+                    scorerId: result.scorerId,
                 });
-
                 io.to(`game:${game.id}`).emit('game_update', game);
 
-                // Check win condition using captured attacker ID
-                const attacker = attackerId
-                    ? (game.player1.odium === attackerId ? game.player1 : game.player2)
+                // Check win condition
+                const scorer = result.scorerId
+                    ? (game.player1.odium === result.scorerId ? game.player1 : game.player2)
                     : null;
 
                 const WINNING_SCORE = 5;
-                if (attacker && attacker.score >= WINNING_SCORE) {
-                    gameService.endGame(game, attacker.odium, 'وصل للنتيجة المطلوبة');
+                if (scorer && scorer.score >= WINNING_SCORE) {
+                    gameService.endGame(game, scorer.odium, 'وصل للنتيجة المطلوبة');
                     io.to(`game:${game.id}`).emit('game_end', {
-                        winnerId: attacker.odium,
+                        winnerId: scorer.odium,
                         reason: 'فوز بالنقاط',
                     });
                 } else {
-                    // Notify current player of their turn
                     io.to(`game:${game.id}`).emit('turn_start', {
                         playerId: game.currentTurn,
                         timeLimit: game.turnTimeLimit
                     });
                 }
+            } else {
+                socket.emit('error', { message: 'خطأ في إنهاء الدفاع', code: 'INVALID_END_DEFENSE' });
             }
         });
 
