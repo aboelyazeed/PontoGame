@@ -40,6 +40,7 @@ const COLORS = {
     ponto: '#F97316',
     secondary: '#F97316',
     surfaceDarker: '#142814',
+    success: '#22c55e',
 };
 
 // Card images mapping
@@ -225,33 +226,25 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
             return;
         }
 
-        // During play/attack phase - tap own face-down card to reveal as attacker
+        // During play/attack phase - tap own face-down card to SELECT it (reveal needs confirmation)
         if (gameState?.turnPhase === 'play' || gameState?.turnPhase === 'attack') {
             if (!isMyTurn) return;
-            if (isOpponent) return; // Can't reveal opponent's cards
+            if (isOpponent) return; // Can't select opponent's cards
 
-            if (card && !card.isRevealed) {
-                // Can only reveal attackers (FW or MF)
-                if (card.position === 'FW' || card.position === 'MF') {
-                    revealAttacker(slotIndex);
-                }
-            } else if (card) {
-                // Just select revealed cards
+            if (card) {
+                // Select the card (whether revealed or not)
                 selectCard(card.id, false);
             }
             return;
         }
 
-        // During defense phase - tap own face-down card to reveal as defender
+        // During defense phase - tap own face-down card to SELECT it
         if (gameState?.turnPhase === 'defense') {
             if (!isDefensePhase) return;
-            if (isOpponent) return; // Can't reveal opponent's cards
+            if (isOpponent) return; // Can't select opponent's cards
 
-            if (card && !card.isRevealed) {
-                // Can only reveal defenders (DF or GK)
-                if (card.position === 'DF' || card.position === 'GK') {
-                    revealDefender(slotIndex);
-                }
+            if (card) {
+                selectCard(card.id, false);
             }
             return;
         }
@@ -611,6 +604,36 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
 
                     {/* Action Buttons - Full Width */}
                     <View style={styles.actionButtons}>
+                        {/* Reveal Button (Contextual) */}
+                        {(() => {
+                            if (!selectedCardId || !myPlayer) return null;
+                            const index = myPlayer.field.findIndex(c => c?.id === selectedCardId);
+                            if (index === -1) return null;
+                            const card = myPlayer.field[index];
+                            if (!card || card.isRevealed) return null;
+
+                            const isAttack = (gameState?.turnPhase === 'play' || gameState?.turnPhase === 'attack');
+                            const isDefense = isDefensePhase;
+
+                            const isValidAttackReveal = isAttack && isMyTurn && (card.position === 'FW' || card.position === 'MF');
+                            const isValidDefenseReveal = isDefense && (card.position === 'DF' || card.position === 'GK');
+
+                            if (isValidAttackReveal || isValidDefenseReveal) {
+                                return (
+                                    <TouchableOpacity
+                                        style={styles.revealButton}
+                                        onPress={() => {
+                                            if (isValidAttackReveal) revealAttacker(index);
+                                            else revealDefender(index);
+                                        }}
+                                    >
+                                        <Ionicons name="eye" size={18} color="#FFF" />
+                                        <Text style={styles.revealButtonText}>كشف الكرت</Text>
+                                    </TouchableOpacity>
+                                );
+                            }
+                            return null;
+                        })()}
                         {/* Defense Phase Buttons */}
                         {isDefensePhase && (
                             <>
@@ -1225,6 +1248,21 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     defenseButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    revealButton: {
+        flex: 1,
+        backgroundColor: COLORS.success,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    revealButtonText: {
         color: '#FFF',
         fontSize: 14,
         fontWeight: 'bold',
