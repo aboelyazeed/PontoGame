@@ -343,7 +343,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                 onPress={() => handleFieldCardPress(card, index, false)}
                 disabled={!isMyTurn}
             >
-                <View style={styles.slotCardFilled}>
+                <View style={[styles.slotCardFilled, card.isRevealed && { opacity: 0.6 }]}>
                     {cardImage && (
                         <Image source={cardImage} style={styles.slotCardImage} resizeMode="cover" />
                     )}
