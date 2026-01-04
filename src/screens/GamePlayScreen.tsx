@@ -341,7 +341,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                     isAttacker && styles.fieldSlotAttacker,
                 ]}
                 onPress={() => handleFieldCardPress(card, index, false)}
-                disabled={!isMyTurn || isDefensePhase}
+                disabled={!isMyTurn}
             >
                 <View style={styles.slotCardFilled}>
                     {cardImage && (
