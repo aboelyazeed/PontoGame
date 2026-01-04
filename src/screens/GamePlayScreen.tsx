@@ -538,7 +538,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                             </View>
 
                             {/* Moves Indicator */}
-                            {isMyTurn && myPlayer && gameState?.turnPhase === 'play' && (
+                            {isMyTurn && myPlayer && (gameState?.turnPhase === 'play' || gameState?.turnPhase === 'attack') && (
                                 <View style={styles.movesIndicator}>
                                     {[0, 1, 2].map(i => (
                                         <View
@@ -546,6 +546,21 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                                             style={[
                                                 styles.moveDot,
                                                 i < myPlayer.movesRemaining && styles.moveDotActive
+                                            ]}
+                                        />
+                                    ))}
+                                </View>
+                            )}
+
+                            {/* Defender Moves Indicator */}
+                            {isDefensePhase && pendingAttack && (
+                                <View style={styles.movesIndicator}>
+                                    {[0, 1, 2].map(i => (
+                                        <View
+                                            key={i}
+                                            style={[
+                                                styles.moveDot,
+                                                i < pendingAttack.defenderMovesRemaining && styles.moveDotActive
                                             ]}
                                         />
                                     ))}
@@ -1140,9 +1155,10 @@ const styles = StyleSheet.create({
     },
     movesIndicator: {
         position: 'absolute',
-        bottom: 8,
+        top: 40,
         flexDirection: 'row',
         gap: 4,
+        zIndex: 25,
     },
     moveDot: {
         width: 8,
