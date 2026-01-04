@@ -638,11 +638,21 @@ export class GameService {
         const fieldCard = player.field[fieldSlotIndex];
         if (!fieldCard) return false; // Must swap with existing card
 
-        // Swap
         const handCard = player.hand[handCardIndex];
-        handCard.isRevealed = false; // Placed face-down
-        player.field[fieldSlotIndex] = handCard;
-        player.hand[handCardIndex] = fieldCard;
+        handCard.isRevealed = false; // Placed face-down on field
+
+        // Check conditions: If field card is revealed, it goes back to "deck" (discarded)
+        if (fieldCard.isRevealed) {
+            // Move Hand Card to Field
+            player.field[fieldSlotIndex] = handCard;
+            // Remove Hand Card from Hand (it moved to field) and discard Field Card (don't put in hand)
+            player.hand.splice(handCardIndex, 1);
+        } else {
+            // Normal Swap for unrevealed cards
+            fieldCard.isRevealed = false;
+            player.field[fieldSlotIndex] = handCard;
+            player.hand[handCardIndex] = fieldCard;
+        }
 
         player.movesRemaining -= 1;
 

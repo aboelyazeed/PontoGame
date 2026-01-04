@@ -232,6 +232,15 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
             if (!isMyTurn) return;
             if (isOpponent) return; // Can't select opponent's cards
 
+            // SWAP LOGIC: If 'play' phase and a hand card is selected, try to swap
+            if (gameState.turnPhase === 'play' && selectedCardId && myPlayer) {
+                const isHandCard = myPlayer.hand.some(c => c.id === selectedCardId);
+                if (isHandCard && card) {
+                    swapCards(selectedCardId, slotIndex);
+                    return;
+                }
+            }
+
             if (card) {
                 // Select the card (whether revealed or not)
                 selectCard(card.id, false);
