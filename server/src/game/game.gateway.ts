@@ -263,6 +263,8 @@ export function setupGameSocket(io: Server) {
 
             // Start the game
             game.status = 'playing';
+            game.turnPhase = 'draw';
+            game.drawsRemaining = 2;
             game.turnStartTime = Date.now();
             game.turnNumber = 1;
 
