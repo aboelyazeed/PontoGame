@@ -139,6 +139,7 @@ export interface ClientToServerEvents {
 
     // New Attack/Defense Flow
     reveal_attacker: (data: { slotIndex: number }) => void;
+    draw_ponto: () => void;
     end_attack_phase: () => void;
     reveal_defender: (data: { slotIndex: number }) => void;
     accept_goal: () => void;
@@ -203,6 +204,7 @@ export interface ServerToClientEvents {
 
     // New Attack/Defense Flow Events
     attacker_revealed: (data: { playerId: string; slotIndex: number; pontoCard?: GameCard; attackSum?: number }) => void;
+    ponto_drawn: (data: { pontoCard: GameCard; attackSum: number }) => void;
     defense_phase_started: (data: { attackSum: number; defenderId: string }) => void;
     defender_revealed: (data: { playerId: string; slotIndex: number; defenseSum?: number }) => void;
     goal_scored: (data: { scorerId?: string }) => void;

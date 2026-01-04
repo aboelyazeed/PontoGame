@@ -112,6 +112,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         revealDefender,
         acceptGoal,
         endDefense,
+        drawPonto,
         endTurn,
         surrender,
         clearGameEnd,
@@ -426,6 +427,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                 : isDefensePhase ? 'دافع!'
                     : isMyTurn ? 'دورك - اللعب'
                         : 'دور المنافس';
+    const isAttackPontoNeeded = gameState?.turnPhase === 'attack' && isMyTurn && pendingAttack && !pendingAttack.pontoCard;
 
     return (
         <View style={styles.container}>
@@ -560,7 +562,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                                             key={i}
                                             style={[
                                                 styles.moveDot,
-                                                i < pendingAttack.defenderMovesRemaining && styles.moveDotActive
+                                                i < (pendingAttack.defenderMovesRemaining || 0) && styles.moveDotActive
                                             ]}
                                         />
                                     ))}
@@ -570,6 +572,18 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                             {/* Attack/Defense Battle Display */}
                             {(gameState?.turnPhase === 'attack' || gameState?.turnPhase === 'defense') && pendingAttack && (
                                 <View style={styles.battleDisplay}>
+                                    {/* Ponto Card Display */}
+                                    {pendingAttack.pontoCard && (
+                                        <View style={styles.pontoCardDisplay}>
+                                            <Image
+                                                source={CARD_IMAGES[(pendingAttack.pontoCard.imageName || 'ponto') as keyof typeof CARD_IMAGES] || CARD_IMAGES['ponto' as keyof typeof CARD_IMAGES]}
+                                                style={styles.pontoCardImage}
+                                                resizeMode="contain"
+                                            />
+                                            <Text style={styles.pontoCardValue}>+{pendingAttack.pontoCard.attack}</Text>
+                                        </View>
+                                    )}
+
                                     <View style={styles.battleSide}>
                                         <Text style={styles.battleLabel}>هجوم</Text>
                                         <Text style={styles.battleValue}>{pendingAttack.attackSum}</Text>
@@ -600,12 +614,15 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                         {/* Right Side - Ponto Deck */}
                         <View style={styles.deckSidebarRight}>
                             <TouchableOpacity
-                                style={styles.deckCard}
-                                onPress={() => drawCards('ponto', 1)}
+                                style={[
+                                    styles.deckCard,
+                                    isAttackPontoNeeded && styles.deckCardActive
+                                ]}
+                                onPress={() => isAttackPontoNeeded ? drawPonto() : drawCards('ponto', 1)}
                                 disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 1}
                             >
-                                <MaterialCommunityIcons name="diamond" size={20} color="rgba(255,255,255,0.4)" />
-                                <Text style={styles.deckLabel}>بونتو</Text>
+                                <MaterialCommunityIcons name="diamond" size={20} color={isAttackPontoNeeded ? COLORS.ponto : "rgba(255,255,255,0.4)"} />
+                                <Text style={[styles.deckLabel, isAttackPontoNeeded && styles.deckLabelActive]}>بونتو</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -649,6 +666,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                             }
                             return null;
                         })()}
+
                         {/* Defense Phase Buttons */}
                         {isDefensePhase && (
                             <>
@@ -671,7 +689,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                         )}
 
                         {/* Attack Phase Button */}
-                        {gameState?.turnPhase === 'attack' && isMyTurn && (
+                        {gameState?.turnPhase === 'attack' && isMyTurn && pendingAttack?.pontoCard && (
                             <TouchableOpacity
                                 style={styles.endAttackButton}
                                 onPress={endAttackPhase}
@@ -1283,6 +1301,44 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
     },
+    drawPontoButton: {
+        flex: 2,
+        backgroundColor: COLORS.ponto,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    drawPontoText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    pontoCardDisplay: {
+        position: 'absolute',
+        top: -65,
+        alignSelf: 'center',
+        alignItems: 'center',
+        zIndex: 30,
+    },
+    pontoCardImage: {
+        width: 40,
+        height: 56,
+        borderRadius: 4,
+        backgroundColor: COLORS.surfaceLighter,
+    },
+    pontoCardValue: {
+        color: COLORS.ponto,
+        fontSize: 10,
+        fontWeight: 'bold',
+        marginTop: 2,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+        borderRadius: 4,
+    },
     acceptGoalButton: {
         flex: 1,
         backgroundColor: COLORS.error,
@@ -1562,11 +1618,7 @@ const styles = StyleSheet.create({
 
     // OTHER MODALS & LABELS
 
-    pontoCardValue: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: COLORS.ponto,
-    },
+
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.7)',

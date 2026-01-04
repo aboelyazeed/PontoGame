@@ -874,7 +874,12 @@ export class GameService {
         if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
         if (gameState.turnPhase === 'defense') return { success: false, message: 'أنت في مرحلة الدفاع' };
         if (gameState.turnPhase === 'draw') return { success: false, message: 'يجب سحب الكروت أولاً' };
-        if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
+
+        // Cost: 1 to reveal. If first attacker, reserve +1 for Ponto = 2 total
+        const minMoves = (!gameState.pendingAttack) ? 2 : 1;
+        if (player.movesRemaining < minMoves) {
+            return { success: false, message: minMoves === 2 ? 'تحتاج حركتين (كشف + بونطو)' : 'لا توجد حركات كافية' };
+        }
 
         const card = player.field[slotIndex];
         if (!card) return { success: false, message: 'لا يوجد كرت في هذا المكان' };
@@ -890,22 +895,19 @@ export class GameService {
         // Set phase to attack
         gameState.turnPhase = 'attack';
 
-        // First attacker - create pending attack and draw Ponto
+        // First attacker - create pending attack (Ponto drawn manually later)
         if (!gameState.pendingAttack) {
-            const pontoCard = this.drawPontoCard();
-
             gameState.pendingAttack = {
                 attackerId: odium,
                 attackerSlots: [slotIndex],
-                attackSum: (card.attack || 0) + (pontoCard.attack || 0),
-                pontoCard: pontoCard,
+                attackSum: (card.attack || 0),
                 defenseSum: 0,
                 defenderSlots: [],
             };
 
             return {
                 success: true,
-                pontoCard: pontoCard,
+                pontoCard: undefined,
                 attackSum: gameState.pendingAttack.attackSum
             };
         }
@@ -918,8 +920,49 @@ export class GameService {
         gameState.pendingAttack.attackerSlots.push(slotIndex);
         gameState.pendingAttack.attackSum += (card.attack || 0);
 
+        // Check for Auto-Transition (if 2nd attacker revealed and no moves left, and Ponto already drawn)
+        // Note: Ponto MUST be drawn to end attack. If 2nd attacker revealed but somehow Ponto missing (shouldn't happen with flow), don't end.
+        if (gameState.pendingAttack.pontoCard && player.movesRemaining === 0) {
+            this.endAttackPhase(gameState, odium);
+        }
+
         return {
             success: true,
+            attackSum: gameState.pendingAttack.attackSum
+        };
+    }
+
+    /**
+     * Draw random Ponto card for the attack (called manually by attacker)
+     */
+    drawAttackPonto(
+        gameState: GameState,
+        odium: string
+    ): { success: boolean; message?: string; pontoCard?: GameCard; attackSum?: number } {
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        if (gameState.turnPhase !== 'attack') return { success: false, message: 'لست في مرحلة الهجوم' };
+        if (!gameState.pendingAttack) return { success: false, message: 'لم يتم الكشف عن مهاجم' };
+        if (gameState.pendingAttack.pontoCard) return { success: false, message: 'تم سحب بونطو بالفعل' };
+
+        // Deduct move cost (1 move)
+        const player = odium === gameState.player1.odium ? gameState.player1 : gameState.player2!;
+        if (player.movesRemaining < 1) {
+            return { success: false, message: 'لا يوجد حركات كافية لسحب البونطو' };
+        }
+        player.movesRemaining -= 1;
+
+        const pontoCard = this.drawPontoCard();
+        gameState.pendingAttack.pontoCard = pontoCard;
+        gameState.pendingAttack.attackSum += (pontoCard.attack || 0);
+
+        // Auto-end attack if moves exhausted
+        if (player.movesRemaining === 0) {
+            this.endAttackPhase(gameState, odium);
+        }
+
+        return {
+            success: true,
+            pontoCard,
             attackSum: gameState.pendingAttack.attackSum
         };
     }

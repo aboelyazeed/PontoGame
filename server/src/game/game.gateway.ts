@@ -764,6 +764,28 @@ export function setupGameSocket(io: Server) {
             }
         });
 
+        // Draw Ponto card manually (triggered by attacker after reveal)
+        socket.on('draw_ponto', () => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.drawAttackPonto(game, socket.userId!);
+
+            if (result.success) {
+                const roomSocketId = `game:${game.id}`;
+                io.to(roomSocketId).emit('ponto_drawn', {
+                    pontoCard: result.pontoCard!,
+                    attackSum: result.attackSum!
+                });
+                io.to(roomSocketId).emit('game_update', game);
+            } else {
+                socket.emit('error', { message: result.message || 'خطأ', code: 'ACTION_FAILED' });
+            }
+        });
+
         // End attack phase - switch to defense
         socket.on('end_attack_phase', () => {
             const game = gameService.getGameByPlayer(socket.userId!);

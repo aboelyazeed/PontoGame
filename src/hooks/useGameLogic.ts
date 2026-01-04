@@ -17,6 +17,7 @@ export interface GameCard {
     defense?: number;
     description?: string;
     imageUrl?: string;
+    imageName?: string;
     isRevealed?: boolean;
     actionEffect?: ActionEffect;
     isLegendary?: boolean;
@@ -40,11 +41,12 @@ export interface PlayerState {
 
 export interface PendingAttack {
     attackerId: string;
-    attackerSlotIndex: number;
-    defenderSlotIndex: number;
+    attackerSlots: number[];
+    pontoCard?: GameCard;
     attackSum: number;
     defenseSum: number;
-    defenderMovesRemaining: number;
+    defenderMovesRemaining?: number;
+    defenderSlots: number[];
 }
 
 export interface GameState {
@@ -324,6 +326,10 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         socketService.emit('end_defense');
     }, []);
 
+    const drawPonto = useCallback(() => {
+        socketService.emit('draw_ponto');
+    }, []);
+
     const endTurn = useCallback(() => {
         socketService.emit('end_turn');
     }, []);
@@ -368,6 +374,7 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         revealDefender,
         acceptGoal,
         endDefense,
+        drawPonto,
         endTurn,
         surrender,
         clearGameEnd,
