@@ -1061,7 +1061,9 @@ export class GameService {
         gameState.pendingAttack = undefined;
 
         // End turn - switch to defender (who now starts their draw phase)
-        this.endTurn(gameState, odium);
+        // CRITICAL FIX: Explicitly start turn for the DEFENDER (odium is the defender here)
+        // Do NOT use endTurn() because that toggles the player. We want the CURRENT player (defender) to start their turn.
+        this.startTurn(gameState, odium);
 
         return { success: true, scorerId: attackerId };
     }
@@ -1097,7 +1099,8 @@ export class GameService {
         gameState.pendingAttack = undefined;
 
         // End turn - switch to defender (who now starts their draw phase)
-        this.endTurn(gameState, odium);
+        // CRITICAL FIX: Explicitly start turn for the DEFENDER (odium is the defender here)
+        this.startTurn(gameState, odium);
 
         return { success: true, result, scorerId: result === 'goal' ? attackerId : undefined };
     }
@@ -1105,9 +1108,20 @@ export class GameService {
     endTurn(gameState: GameState, odium: string): boolean {
         if (gameState.currentTurn !== odium) return false;
 
-        // Switch turn
+        // Switch turn logic
         const isPlayer1 = gameState.player1.odium === odium;
         const nextPlayer = isPlayer1 ? gameState.player2! : gameState.player1;
+
+        return this.startTurn(gameState, nextPlayer.odium);
+    }
+
+    /**
+     * EXTRACTED: Explicitly start a turn for a specific player ID
+     * This allows us to force the turn to the defender after an attack resolution
+     */
+    startTurn(gameState: GameState, nextPlayerId: string): boolean {
+        const nextPlayer = this.getPlayer(gameState, nextPlayerId);
+        if (!nextPlayer) return false;
 
         gameState.currentTurn = nextPlayer.odium;
 
