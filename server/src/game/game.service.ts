@@ -1020,8 +1020,8 @@ export class GameService {
         const card = player.field[slotIndex];
         if (!card) return { success: false, message: 'لا يوجد كرت في هذا المكان' };
         if (card.isRevealed) return { success: false, message: 'الكرت مكشوف بالفعل' };
-        if (card.position !== 'DF' && card.position !== 'GK') {
-            return { success: false, message: 'يجب أن يكون الكرت مدافع (DF أو GK)' };
+        if (card.position !== 'DF' && card.position !== 'GK' && card.position !== 'MF') {
+            return { success: false, message: 'يجب أن يكون الكرت مدافع (DF, GK, MF)' };
         }
 
         // Reveal the card

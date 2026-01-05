@@ -657,7 +657,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                             const isDefense = isDefensePhase;
 
                             const isValidAttackReveal = isAttack && isMyTurn && (card.position === 'FW' || card.position === 'MF');
-                            const isValidDefenseReveal = isDefense && (card.position === 'DF' || card.position === 'GK');
+                            const isValidDefenseReveal = isDefense && (card.position === 'DF' || card.position === 'GK' || card.position === 'MF');
 
                             if (isValidAttackReveal || isValidDefenseReveal) {
                                 return (
