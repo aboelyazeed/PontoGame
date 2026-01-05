@@ -536,6 +536,11 @@ export class GameService {
         // Check if it's player's turn
         if (gameState.currentTurn !== odium) return false;
 
+        // NEW RULE: If attacking and Ponto not drawn, block other moves
+        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            return false;
+        }
+
         // Check if player has moves remaining (costs 1 move)
         if (player.movesRemaining < 1) return false;
 
@@ -570,6 +575,10 @@ export class GameService {
         const player = this.getPlayer(gameState, odium);
         if (!player) return { success: false, drawnCards: [] };
         if (gameState.currentTurn !== odium) return { success: false, drawnCards: [] };
+        // NEW RULE: If attacking and Ponto not drawn, block
+        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            return { success: false, drawnCards: [] };
+        }
         if (player.movesRemaining < 1) return { success: false, drawnCards: [] };
 
         const drawnCards: GameCard[] = [];
@@ -608,6 +617,12 @@ export class GameService {
         const player = this.getPlayer(gameState, odium);
         if (!player) return false;
         if (gameState.currentTurn !== odium) return false;
+
+        // NEW RULE: If attacking and Ponto not drawn, block
+        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            return false;
+        }
+
         if (player.movesRemaining < 1) return false;
 
         const card = player.field[slotIndex];
@@ -628,6 +643,12 @@ export class GameService {
         const player = this.getPlayer(gameState, odium);
         if (!player) return false;
         if (gameState.currentTurn !== odium) return false;
+
+        // NEW RULE: If attacking and Ponto not drawn, block
+        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            return false;
+        }
+
         if (player.movesRemaining < 1) return false;
 
         // Find card in hand
@@ -673,6 +694,12 @@ export class GameService {
         const player = this.getPlayer(gameState, odium);
         if (!player) return { success: false, message: 'لاعب غير موجود' };
         if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+
+        // NEW RULE: If attacking and Ponto not drawn, block
+        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            return { success: false, message: 'يجب سحب كارت بونطو أولاً' };
+        }
+
         if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
 
         // Find legendary card in hand
@@ -738,6 +765,12 @@ export class GameService {
         if (gameState.currentTurn !== odium && gameState.turnPhase !== 'defense') {
             return { success: false, message: 'ليس دورك' };
         }
+
+        // NEW RULE: If attacking and Ponto not drawn, block
+        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            return { success: false, message: 'يجب سحب كارت بونطو أولاً' };
+        }
+
         if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
 
         // Find action card in hand
@@ -884,6 +917,11 @@ export class GameService {
         if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
         if (gameState.turnPhase === 'defense') return { success: false, message: 'أنت في مرحلة الدفاع' };
         if (gameState.turnPhase === 'draw') return { success: false, message: 'يجب سحب الكروت أولاً' };
+
+        // NEW RULE: If ALREADY have pending attack (meaning this is 2nd attacker), MUST have drawn Ponto first
+        if (gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            return { success: false, message: 'يجب سحب كارت بونطو قبل كشف مهاجم آخر' };
+        }
 
         // Cost: 1 to reveal. If first attacker, reserve +1 for Ponto = 2 total
         const minMoves = (!gameState.pendingAttack) ? 2 : 1;

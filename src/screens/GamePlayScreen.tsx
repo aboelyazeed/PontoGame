@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { Button, Toast, AlertPopup, ConfirmPopup } from '../components/ui';
 import { useGameLogic, GameCard } from '../hooks/useGameLogic';
 import { useAuthStore } from '../store/authStore';
 
@@ -132,12 +133,52 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
+    const [confirmConfig, setConfirmConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+    });
+
     const handleSurrender = () => {
-        Alert.alert('استسلام', 'هل أنت متأكد؟', [
-            { text: 'إلغاء', style: 'cancel' },
-            { text: 'استسلام', style: 'destructive', onPress: surrender },
-        ]);
+        setConfirmConfig({
+            visible: true,
+            title: 'استسلام',
+            message: 'هل أنت متأكد من الاستسلام؟',
+            onConfirm: () => {
+                surrender();
+                setConfirmConfig(prev => ({ ...prev, visible: false }));
+            },
+        });
         setShowMenu(false);
+    };
+
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+    });
+
+    const showAlert = (title: string, message: string) => {
+        setAlertConfig({
+            visible: true,
+            title,
+            message,
+        });
+    };
+
+    const hideAlert = () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
     };
 
     const handleActionUse = (card: GameCard) => {
@@ -173,7 +214,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
 
         if (actionTargetMode === 'target_opp') {
             if (!isOpponent || !card) {
-                Alert.alert('خطأ', 'يجب اختيار لاعب خصم');
+                showAlert('خطأ', 'يجب اختيار لاعب خصم');
                 return;
             }
             useActionCard(selectedActionCard.id, { slotIndex1: slotIndex, isOpponentSlot1: true });
@@ -181,7 +222,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         }
         else if (actionTargetMode === 'target_my') {
             if (isOpponent || !card) {
-                Alert.alert('خطأ', 'يجب اختيار لاعب من فريقك');
+                showAlert('خطأ', 'يجب اختيار لاعب من فريقك');
                 return;
             }
             useActionCard(selectedActionCard.id, { slotIndex1: slotIndex });
@@ -189,7 +230,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         }
         else if (actionTargetMode === 'swap_my') {
             if (isOpponent || !card) {
-                Alert.alert('خطأ', 'يجب اختيار لاعب من فريقك أولاً');
+                showAlert('خطأ', 'يجب اختيار لاعب من فريقك أولاً');
                 return;
             }
             setTempTargetData({ slotIndex1: slotIndex });
@@ -198,7 +239,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         }
         else if (actionTargetMode === 'swap_opp') {
             if (!isOpponent || !card) {
-                Alert.alert('خطأ', 'يجب اختيار لاعب خصم');
+                showAlert('خطأ', 'يجب اختيار لاعب خصم');
                 return;
             }
             useActionCard(selectedActionCard.id, {
@@ -220,6 +261,12 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     const handleFieldCardPress = (card: GameCard | null, slotIndex: number, isOpponent: boolean) => {
         // Block all interactions during draw phase
         if (gameState?.turnPhase === 'draw') return;
+
+        // Block all interactions if Ponto card is needed (Attack Phase)
+        if (isAttackPontoNeeded) {
+            showAlert('تنبيه', 'يجب سحب كارت بونطو أولاً!');
+            return;
+        }
 
         // Handle Action Targeting
         if (actionTargetMode !== 'none') {
@@ -263,6 +310,13 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     const handleEmptySlotPress = (slotIndex: number) => {
         // Block during draw phase
         if (gameState?.turnPhase === 'draw') return;
+
+        // Block all interactions if Ponto card is needed (Attack Phase)
+        if (isAttackPontoNeeded) {
+            showAlert('تنبيه', 'يجب سحب كارت بونطو أولاً!');
+            return;
+        }
+
         if (!isMyTurn || attackMode) return;
         if (actionTargetMode !== 'none') return; // Don't allow playing to empty slots while targeting
 
@@ -277,6 +331,13 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
     const handleHandCardPress = (card: GameCard) => {
         // Block during draw phase
         if (gameState?.turnPhase === 'draw') return;
+
+        // Block all interactions if Ponto card is needed (Attack Phase)
+        if (isAttackPontoNeeded) {
+            showAlert('تنبيه', 'يجب سحب كارت بونطو أولاً!');
+            return;
+        }
+
         if (!isMyTurn && !isDefensePhase) return;
 
         if (card.type === 'action') {
@@ -659,7 +720,8 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                             const isValidAttackReveal = isAttack && isMyTurn && (card.position === 'FW' || card.position === 'MF');
                             const isValidDefenseReveal = isDefense && (card.position === 'DF' || card.position === 'GK' || card.position === 'MF');
 
-                            if (isValidAttackReveal || isValidDefenseReveal) {
+                            // Hide reveal button if Ponto needed
+                            if ((isValidAttackReveal || isValidDefenseReveal) && !isAttackPontoNeeded) {
                                 return (
                                     <TouchableOpacity
                                         style={styles.revealButton}
@@ -810,6 +872,26 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                     </View>
                 </View>
             </Modal>
+
+            {/* Custom Alert Popup */}
+            <AlertPopup
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                onPress={hideAlert}
+            />
+
+            {/* Custom Confirm Popup */}
+            <ConfirmPopup
+                visible={confirmConfig.visible}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                onConfirm={confirmConfig.onConfirm}
+                onCancel={() => setConfirmConfig(prev => ({ ...prev, visible: false }))}
+                confirmText="استسلام"
+                cancelText="إلغاء"
+                confirmDestructive
+            />
         </View>
     );
 };
