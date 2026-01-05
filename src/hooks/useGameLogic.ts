@@ -100,14 +100,23 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
     const getMyPlayer = useCallback((): PlayerState | null => {
         if (!state.gameState || !myPlayerId) return null;
         if (state.gameState.player1.odium === myPlayerId) return state.gameState.player1;
-        return state.gameState.player2;
+        if (state.gameState.player2?.odium === myPlayerId) return state.gameState.player2;
+
+        console.log('⚠️ Observer mode or ID mismatch:', {
+            myId: myPlayerId,
+            p1: state.gameState.player1.odium,
+            p2: state.gameState.player2?.odium
+        });
+        return null;
     }, [state.gameState, myPlayerId]);
 
     // Get opponent data
     const getOpponent = useCallback((): PlayerState | null => {
         if (!state.gameState || !myPlayerId) return null;
         if (state.gameState.player1.odium === myPlayerId) return state.gameState.player2;
-        return state.gameState.player1;
+        if (state.gameState.player2?.odium === myPlayerId) return state.gameState.player1;
+
+        return null;
     }, [state.gameState, myPlayerId]);
 
     // Check if it's my turn
