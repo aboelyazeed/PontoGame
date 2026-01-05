@@ -592,8 +592,9 @@ export class GameService {
                 sourcePool = [...ACTION_CARDS];
                 break;
             case 'ponto':
-                sourcePool = [...PONTO_CARDS];
-                break;
+                // RESTRICTION: Ponto cards cannot be drawn manually using generic drawCards.
+                // They are only drawn during attack phase specific step (via drawPonto) or via Action Cards effects.
+                return { success: false, drawnCards: [] };
         }
 
         for (let i = 0; i < count && sourcePool.length > 0; i++) {

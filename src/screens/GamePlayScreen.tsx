@@ -688,10 +688,10 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                                     styles.deckCard,
                                     isAttackPontoNeeded && styles.deckCardActive
                                 ]}
-                                onPress={() => isAttackPontoNeeded ? drawPonto() : drawCards('ponto', 1)}
-                                disabled={!isMyTurn || (myPlayer?.movesRemaining || 0) < 1}
+                                onPress={() => drawPonto()}
+                                disabled={!isAttackPontoNeeded}
                             >
-                                <MaterialCommunityIcons name="diamond" size={20} color={isAttackPontoNeeded ? COLORS.ponto : "rgba(255,255,255,0.4)"} />
+                                <MaterialCommunityIcons name="diamond" size={20} color={isAttackPontoNeeded ? COLORS.ponto : "rgba(255,255,255,0.2)"} />
                                 <Text style={[styles.deckLabel, isAttackPontoNeeded && styles.deckLabelActive]}>بونتو</Text>
                             </TouchableOpacity>
                         </View>
