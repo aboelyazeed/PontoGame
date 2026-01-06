@@ -60,7 +60,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         const isDefense = isDefensePhase;
 
         const isValidAttackReveal = isAttack && isMyTurn && (card.position === 'FW' || card.position === 'MF');
-        const isValidDefenseReveal = isDefense && (card.position === 'DF' || card.position === 'GK' || card.position === 'MF');
+        // Hide reveal button during defense if no moves remaining
+        const hasMovesForDefense = myPlayer.movesRemaining > 0;
+        const isValidDefenseReveal = isDefense && hasMovesForDefense && (card.position === 'DF' || card.position === 'GK' || card.position === 'MF');
 
         // Hide reveal button if Ponto needed
         if ((isValidAttackReveal || isValidDefenseReveal) && !isAttackPontoNeeded) {
