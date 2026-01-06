@@ -221,7 +221,7 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                     <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
                         <Ionicons name="arrow-forward" size={24} color={COLORS.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>غرفة الانتظار</Text>
+                    <Text style={styles.headerTitle} numberOfLines={1}>غرفة الانتظار</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -268,7 +268,7 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                                     <View style={styles.onlineIndicator} />
                                 </View>
                                 <View style={styles.playerInfo}>
-                                    <Text style={styles.playerName}>
+                                    <Text style={styles.playerName} numberOfLines={1}>
                                         {hostPlayer?.odiumInfo?.displayName || 'جاري التحميل...'}
                                     </Text>
                                     <View style={styles.readyStatus}>
@@ -303,7 +303,7 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                                         <View style={styles.onlineIndicator} />
                                     </View>
                                     <View style={styles.playerInfo}>
-                                        <Text style={styles.playerName}>
+                                        <Text style={styles.playerName} numberOfLines={1}>
                                             {opponentPlayer.odiumInfo?.displayName}
                                         </Text>
                                         <View style={styles.readyStatus}>
@@ -337,7 +337,7 @@ const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                                         <Text style={styles.waitingName}>مستني المنافس...</Text>
                                         <View style={styles.waitingStatus}>
                                             <View style={styles.waitingDot} />
-                                            <Text style={styles.waitingStatusText}>جاري الانتظار</Text>
+                                            <Text style={styles.waitingStatusText} numberOfLines={1}>جاري الانتظار</Text>
                                         </View>
                                     </View>
                                     <ActivityIndicator size="small" color={COLORS.textSlate} />

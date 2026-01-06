@@ -75,7 +75,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                     }}
                 >
                     <Ionicons name="eye" size={18} color="#FFF" />
-                    <Text style={styles.revealButtonText}>كشف الكرت</Text>
+                    <Text style={styles.revealButtonText} numberOfLines={1}>كشف الكرت</Text>
                 </TouchableOpacity>
             );
         }
@@ -95,7 +95,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                         onPress={onAcceptGoal}
                     >
                         <Ionicons name="football-outline" size={18} color="#FFF" />
-                        <Text style={styles.acceptGoalText}>قبول الهدف</Text>
+                        <Text style={styles.acceptGoalText} numberOfLines={1}>قبول الهدف</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -103,7 +103,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                         onPress={onEndDefense}
                     >
                         <Ionicons name="shield" size={18} color="#FFF" />
-                        <Text style={styles.defenseButtonText}>إنهاء الدفاع</Text>
+                        <Text style={styles.defenseButtonText} numberOfLines={1}>إنهاء الدفاع</Text>
                     </TouchableOpacity>
                 </>
             )}
@@ -115,7 +115,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                     onPress={onEndAttackPhase}
                 >
                     <MaterialCommunityIcons name="sword-cross" size={18} color="#FFF" />
-                    <Text style={styles.endAttackText}>إنهاء الهجوم</Text>
+                    <Text style={styles.endAttackText} numberOfLines={1}>إنهاء الهجوم</Text>
                 </TouchableOpacity>
             )}
 
@@ -125,7 +125,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                     style={styles.endTurnButton}
                     onPress={onEndTurn}
                 >
-                    <Text style={styles.endTurnText}>إنهاء الدور</Text>
+                    <Text style={styles.endTurnText} numberOfLines={1}>إنهاء الدور</Text>
                 </TouchableOpacity>
             )}
         </View>

@@ -153,9 +153,9 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
                 <View style={styles.titleContainer}>
                     <Text style={styles.title}>
                         بونطو
-                        <Text style={styles.titleDot}>.</Text>
                     </Text>
                     <Text style={styles.subtitle}>
+                        <Text style={styles.titleDot}>.</Text>
                         لعبة كروت كورة أونلاين
                     </Text>
                 </View>
@@ -271,6 +271,8 @@ const styles = StyleSheet.create({
         letterSpacing: -1,
     },
     titleDot: {
+        fontSize: 56,
+        fontWeight: '900',
         color: COLORS.primary,
     },
     subtitle: {
