@@ -334,6 +334,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                     timerSeconds={timerSeconds}
                     matchTimerSeconds={matchTimerSeconds}
                     isMyTurn={isMyTurn}
+                    turnTimeLimit={gameState.turnTimeLimit || 90}
                 />
 
                 {/* Main Game Area */}

@@ -61,7 +61,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({
     timerSeconds,
     matchTimerSeconds,
     isMyTurn,
-    turnTimeLimit = 60,
+    turnTimeLimit = 90,
 }) => {
     // Calculate timer progress (0 to 1)
     const timerProgress = Math.max(0, Math.min(1, timerSeconds / turnTimeLimit));
@@ -87,7 +87,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({
                                 strokeWidth={STROKE_WIDTH}
                                 fill="transparent"
                             />
-                            {/* Progress Circle - Only show if my turn */}
+                            {/* Progress Circle - Show for current turn's player */}
                             {isMyTurn && (
                                 <Circle
                                     cx={AVATAR_SIZE / 2}
@@ -141,7 +141,7 @@ const GameHeader: React.FC<GameHeaderProps> = ({
                                 strokeWidth={STROKE_WIDTH}
                                 fill="transparent"
                             />
-                            {/* Progress Circle - Only show if opponent's turn */}
+                            {/* Progress Circle - Show for opponent's turn */}
                             {!isMyTurn && (
                                 <Circle
                                     cx={AVATAR_SIZE / 2}

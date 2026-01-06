@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { socketService } from '../services/socket';
 
 // Types matching backend
@@ -56,6 +56,7 @@ export interface GameState {
     turnPhase: 'draw' | 'play' | 'attack' | 'defense' | 'end';
     turnNumber: number;
     turnTimeLimit: number;
+    turnStartTime?: number;
     matchStartTime?: number;
     matchTimeLimit: number;
     isGoldenGoal?: boolean;
@@ -64,6 +65,7 @@ export interface GameState {
     player2: PlayerState | null;
     pendingAttack?: PendingAttack;
     winner?: string;
+    serverTime?: number; // For clock synchronization
 }
 
 interface LocalGameState {
@@ -119,6 +121,39 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         return null;
     }, [state.gameState, myPlayerId]);
 
+    // Clock synchronization
+    const clockOffsetRef = useRef<number>(0);
+
+    const getSyncedNow = () => Date.now() + clockOffsetRef.current;
+
+    // Timer effect
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (!state.gameState) return;
+
+            // Sync Match Timer
+            if (state.gameState.matchStartTime) {
+                const now = getSyncedNow();
+                const elapsed = (now - state.gameState.matchStartTime) / 1000;
+                const matchRemaining = Math.max(0, Math.floor((state.gameState.matchTimeLimit || 1200) - elapsed));
+
+                setState(prev => ({ ...prev, matchTimerSeconds: matchRemaining }));
+            }
+
+            // Sync Turn Timer
+            // Check if game is playing
+            if (state.gameState.status === 'playing' && state.gameState.turnStartTime) {
+                const now = getSyncedNow();
+                const elapsed = (now - state.gameState.turnStartTime) / 1000;
+                const turnRemaining = Math.max(0, Math.floor((state.gameState.turnTimeLimit || 90) - elapsed));
+
+                setState(prev => ({ ...prev, timerSeconds: turnRemaining }));
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [state.gameState?.turnStartTime, state.gameState?.matchStartTime, state.gameState?.status]);
+
     // Check if it's my turn
     const checkIsMyTurn = useCallback((gameState: GameState): boolean => {
         if (!myPlayerId) return false;
@@ -138,34 +173,85 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
             console.log('👤 Player1:', gameState.player1.odium);
             console.log('👤 Player2:', gameState.player2?.odium);
 
+            // Update clock offset
+            if (gameState.serverTime) {
+                clockOffsetRef.current = gameState.serverTime - Date.now();
+                console.log('⏰ Synced clock offset:', clockOffsetRef.current);
+            }
+
+            // Calculate accurate turn timer from server's turnStartTime
+            const now = getSyncedNow();
+            let turnRemaining = gameState.turnTimeLimit || 90;
+            if (gameState.turnStartTime) {
+                const elapsed = (now - gameState.turnStartTime) / 1000;
+                turnRemaining = Math.max(0, Math.floor(gameState.turnTimeLimit - elapsed));
+            }
+
+            // Calculate accurate match timer from server's matchStartTime
+            let matchRemaining = gameState.matchTimeLimit || 1200;
+            if (gameState.matchStartTime) {
+                const elapsed = (now - gameState.matchStartTime) / 1000;
+                matchRemaining = Math.max(0, Math.floor(gameState.matchTimeLimit - elapsed));
+            }
+
             setState(prev => ({
                 ...prev,
                 gameState,
                 isMyTurn: checkIsMyTurn(gameState),
                 isDefensePhase: gameState.turnPhase === 'defense' && checkIsMyTurn(gameState),
-                matchTimerSeconds: gameState.matchTimeLimit || 1200,
-                timerSeconds: gameState.turnTimeLimit || 90,
+                matchTimerSeconds: matchRemaining,
+                timerSeconds: turnRemaining,
             }));
         });
 
-        // Game state updates
+        // Game state updates - sync timers from server timestamps
         socketService.on('game_update', (gameState: GameState) => {
             console.log('📡 Game update:', gameState.turnPhase, 'currentTurn:', gameState.currentTurn);
+
+            // Update clock offset
+            if (gameState.serverTime) {
+                clockOffsetRef.current = gameState.serverTime - Date.now();
+            }
+
+            // Calculate accurate turn timer from server's turnStartTime
+            const now = getSyncedNow();
+            let turnRemaining = gameState.turnTimeLimit || 90;
+            if (gameState.turnStartTime) {
+                const elapsed = (now - gameState.turnStartTime) / 1000;
+                turnRemaining = Math.max(0, Math.floor(gameState.turnTimeLimit - elapsed));
+            }
+
+            // Calculate accurate match timer from server's matchStartTime
+            let matchRemaining = gameState.matchTimeLimit || 1200;
+            if (gameState.matchStartTime) {
+                const elapsed = (now - gameState.matchStartTime) / 1000;
+                matchRemaining = Math.max(0, Math.floor(gameState.matchTimeLimit - elapsed));
+            }
+
             setState(prev => ({
                 ...prev,
                 gameState,
                 isMyTurn: checkIsMyTurn(gameState),
                 isDefensePhase: gameState.turnPhase === 'defense' && checkIsMyTurn(gameState),
+                timerSeconds: turnRemaining,
+                matchTimerSeconds: matchRemaining,
             }));
         });
 
         // Turn starts
-        socketService.on('turn_start', (data: { playerId: string; timeLimit: number }) => {
+        socketService.on('turn_start', (data: { playerId: string; timeLimit: number; remainingTime?: number; turnStartTime?: number }) => {
             console.log('⏱️ Turn start:', data, 'myId:', myPlayerId);
+            // Calculate remaining time from server's turnStartTime if available
+            let remaining = data.remainingTime ?? data.timeLimit;
+            if (data.turnStartTime) {
+                const now = getSyncedNow();
+                const elapsed = (now - data.turnStartTime) / 1000;
+                remaining = Math.max(0, Math.floor(data.timeLimit - elapsed));
+            }
             setState(prev => ({
                 ...prev,
                 isMyTurn: data.playerId === myPlayerId,
-                timerSeconds: data.timeLimit,
+                timerSeconds: remaining,
                 attackMode: false,
                 selectedAttackerSlot: null,
                 selectedCardId: null,
@@ -232,10 +318,10 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         };
     }, [myPlayerId, checkIsMyTurn]);
 
-    // Timer countdown
+    // Timer countdown - runs for both players (not just active player)
     useEffect(() => {
         let interval: ReturnType<typeof setInterval>;
-        if (state.isMyTurn && state.timerSeconds > 0) {
+        if (state.gameState?.status === 'playing' && state.timerSeconds > 0) {
             interval = setInterval(() => {
                 setState(prev => ({
                     ...prev,
@@ -244,7 +330,7 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
             }, 1000);
         }
         return () => clearInterval(interval);
-    }, [state.isMyTurn, state.timerSeconds]);
+    }, [state.gameState?.status, state.timerSeconds]);
 
     // Match timer countdown
     useEffect(() => {

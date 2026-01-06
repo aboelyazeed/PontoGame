@@ -96,10 +96,13 @@ export function setupGameSocket(io: Server) {
                     // Auto-end the turn
                     const success = gameService.endTurn(game, game.currentTurn);
                     if (success) {
+                        game.serverTime = Date.now();
                         io.to(`game:${gameId}`).emit('game_update', game);
                         io.to(`game:${gameId}`).emit('turn_start', {
                             playerId: game.currentTurn,
-                            timeLimit: game.turnTimeLimit
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
                         });
                         console.log(`⏰ Turn auto-ended. Now ${game.currentTurn}'s turn.`);
                     }
@@ -273,6 +276,8 @@ export function setupGameSocket(io: Server) {
             io.to(roomSocketId).emit('turn_start', {
                 playerId: game.currentTurn,
                 timeLimit: game.turnTimeLimit,
+                remainingTime: game.turnTimeLimit,
+                turnStartTime: game.turnStartTime
             });
         });
 
@@ -436,7 +441,9 @@ export function setupGameSocket(io: Server) {
                     // Notify first player it's their turn
                     socket.emit('turn_start', {
                         playerId: gameState.currentTurn,
-                        timeLimit: gameState.turnTimeLimit
+                        timeLimit: gameState.turnTimeLimit,
+                        remainingTime: gameState.turnTimeLimit,
+                        turnStartTime: gameState.turnStartTime
                     });
                 }, 2000); // 2 second delay for UI transition
             }
@@ -467,6 +474,7 @@ export function setupGameSocket(io: Server) {
             // Check if both ready
             if (game.player1.isReady && game.player2?.isReady) {
                 game.status = 'playing';
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
             }
         });
@@ -493,16 +501,20 @@ export function setupGameSocket(io: Server) {
                     slotIndex,
                 });
 
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Auto-end turn if no moves remaining
                 if (player && player.movesRemaining <= 0) {
                     const endSuccess = gameService.endTurn(game, socket.userId!);
                     if (endSuccess) {
+                        game.serverTime = Date.now();
                         io.to(`game:${game.id}`).emit('game_update', game);
                         io.to(`game:${game.id}`).emit('turn_start', {
                             playerId: game.currentTurn,
-                            timeLimit: game.turnTimeLimit
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
                         });
                     }
                 }
@@ -532,16 +544,20 @@ export function setupGameSocket(io: Server) {
                     card: player?.field[slotIndex],
                 });
 
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Auto-end turn if no moves remaining
                 if (player && player.movesRemaining <= 0) {
                     const endSuccess = gameService.endTurn(game, socket.userId!);
                     if (endSuccess) {
+                        game.serverTime = Date.now();
                         io.to(`game:${game.id}`).emit('game_update', game);
                         io.to(`game:${game.id}`).emit('turn_start', {
                             playerId: game.currentTurn,
-                            timeLimit: game.turnTimeLimit
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
                         });
                     }
                 }
@@ -570,6 +586,7 @@ export function setupGameSocket(io: Server) {
                     drawsRemaining: game.drawsRemaining || 0,
                 });
 
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
             } else {
                 socket.emit('error', { message: result.message || 'خطأ في السحب', code: 'INVALID_DRAW' });
@@ -592,6 +609,7 @@ export function setupGameSocket(io: Server) {
                     drawnCards: result.drawnCards,
                 });
 
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Auto-end turn if no moves remaining
@@ -602,10 +620,13 @@ export function setupGameSocket(io: Server) {
                 if (player && player.movesRemaining <= 0) {
                     const endSuccess = gameService.endTurn(game, socket.userId!);
                     if (endSuccess) {
+                        game.serverTime = Date.now();
                         io.to(`game:${game.id}`).emit('game_update', game);
                         io.to(`game:${game.id}`).emit('turn_start', {
                             playerId: game.currentTurn,
-                            timeLimit: game.turnTimeLimit
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
                         });
                     }
                 }
@@ -634,16 +655,20 @@ export function setupGameSocket(io: Server) {
                     fieldSlotIndex,
                 });
 
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Auto-end turn if no moves remaining
                 if (player && player.movesRemaining <= 0) {
                     const endSuccess = gameService.endTurn(game, socket.userId!);
                     if (endSuccess) {
+                        game.serverTime = Date.now();
                         io.to(`game:${game.id}`).emit('game_update', game);
                         io.to(`game:${game.id}`).emit('turn_start', {
                             playerId: game.currentTurn,
-                            timeLimit: game.turnTimeLimit
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
                         });
                     }
                 }
@@ -675,6 +700,7 @@ export function setupGameSocket(io: Server) {
                     varResult: result.varResult,
                 });
 
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Auto-end turn if no moves remaining
@@ -685,10 +711,13 @@ export function setupGameSocket(io: Server) {
                 if (player && player.movesRemaining <= 0 && game.turnPhase !== 'defense') {
                     const endSuccess = gameService.endTurn(game, socket.userId!);
                     if (endSuccess) {
+                        game.serverTime = Date.now();
                         io.to(`game:${game.id}`).emit('game_update', game);
                         io.to(`game:${game.id}`).emit('turn_start', {
                             playerId: game.currentTurn,
-                            timeLimit: game.turnTimeLimit
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
                         });
                     }
                 }
@@ -719,16 +748,20 @@ export function setupGameSocket(io: Server) {
                     card: player?.field[fieldSlotIndex],
                 });
 
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Auto-end turn if no moves remaining
                 if (player && player.movesRemaining <= 0) {
                     const endSuccess = gameService.endTurn(game, socket.userId!);
                     if (endSuccess) {
+                        game.serverTime = Date.now();
                         io.to(`game:${game.id}`).emit('game_update', game);
                         io.to(`game:${game.id}`).emit('turn_start', {
                             playerId: game.currentTurn,
-                            timeLimit: game.turnTimeLimit
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
                         });
                     }
                 }
@@ -758,6 +791,7 @@ export function setupGameSocket(io: Server) {
                     pontoCard: result.pontoCard,
                     attackSum: result.attackSum,
                 });
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
             } else {
                 socket.emit('error', { message: result.message || 'خطأ في الكشف', code: 'INVALID_REVEAL' });
@@ -780,6 +814,7 @@ export function setupGameSocket(io: Server) {
                     pontoCard: result.pontoCard!,
                     attackSum: result.attackSum!
                 });
+                game.serverTime = Date.now();
                 io.to(roomSocketId).emit('game_update', game);
             } else {
                 socket.emit('error', { message: result.message || 'خطأ', code: 'ACTION_FAILED' });
@@ -801,10 +836,13 @@ export function setupGameSocket(io: Server) {
                     attackSum: game.pendingAttack?.attackSum || 0,
                     defenderId: game.currentTurn,
                 });
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
                 io.to(`game:${game.id}`).emit('turn_start', {
                     playerId: game.currentTurn,
-                    timeLimit: game.turnTimeLimit
+                    timeLimit: game.turnTimeLimit,
+                    remainingTime: game.turnTimeLimit,
+                    turnStartTime: game.turnStartTime
                 });
             } else {
                 socket.emit('error', { message: result.message || 'خطأ', code: 'INVALID_END_ATTACK' });
@@ -827,6 +865,7 @@ export function setupGameSocket(io: Server) {
                     slotIndex,
                     defenseSum: result.defenseSum,
                 });
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
             } else {
                 socket.emit('error', { message: result.message || 'خطأ في الكشف', code: 'INVALID_REVEAL' });
@@ -847,6 +886,7 @@ export function setupGameSocket(io: Server) {
                 io.to(`game:${game.id}`).emit('goal_scored', {
                     scorerId: result.scorerId,
                 });
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Check win condition
@@ -864,7 +904,9 @@ export function setupGameSocket(io: Server) {
                 } else {
                     io.to(`game:${game.id}`).emit('turn_start', {
                         playerId: game.currentTurn,
-                        timeLimit: game.turnTimeLimit
+                        timeLimit: game.turnTimeLimit,
+                        remainingTime: game.turnTimeLimit,
+                        turnStartTime: game.turnStartTime
                     });
                 }
             } else {
@@ -887,6 +929,7 @@ export function setupGameSocket(io: Server) {
                     result: result.result,
                     scorerId: result.scorerId,
                 });
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
 
                 // Check win condition
@@ -904,7 +947,9 @@ export function setupGameSocket(io: Server) {
                 } else {
                     io.to(`game:${game.id}`).emit('turn_start', {
                         playerId: game.currentTurn,
-                        timeLimit: game.turnTimeLimit
+                        timeLimit: game.turnTimeLimit,
+                        remainingTime: game.turnTimeLimit,
+                        turnStartTime: game.turnStartTime
                     });
                 }
             } else {
@@ -942,10 +987,13 @@ export function setupGameSocket(io: Server) {
             const success = gameService.endTurn(game, socket.userId!);
 
             if (success) {
+                game.serverTime = Date.now();
                 io.to(`game:${game.id}`).emit('game_update', game);
                 io.to(`game:${game.id}`).emit('turn_start', {
                     playerId: game.currentTurn,
                     timeLimit: game.turnTimeLimit,
+                    remainingTime: game.turnTimeLimit,
+                    turnStartTime: game.turnStartTime
                 });
             }
         });

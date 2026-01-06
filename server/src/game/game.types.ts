@@ -91,6 +91,7 @@ export interface GameState {
 
     lastAction?: GameAction;
     winner?: string;
+    serverTime?: number; // For clock synchronization
 }
 
 // Game Actions
@@ -195,7 +196,7 @@ export interface ServerToClientEvents {
     // Game Events
     game_start: (gameState: GameState) => void;
     game_update: (gameState: GameState) => void;
-    turn_start: (data: { playerId: string; timeLimit: number }) => void;
+    turn_start: (data: { playerId: string; timeLimit: number; remainingTime: number; turnStartTime: number }) => void;
 
     // Action Results
     card_played: (data: { playerId: string; card: GameCard; slotIndex: number }) => void;

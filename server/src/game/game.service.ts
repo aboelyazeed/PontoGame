@@ -498,6 +498,7 @@ export class GameService {
         // Initialize game start
         room.status = 'starting';
         room.turnStartTime = Date.now();
+        room.matchStartTime = Date.now();
         room.turnNumber = 1;
 
         return room;
