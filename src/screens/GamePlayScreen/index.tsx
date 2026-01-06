@@ -9,6 +9,7 @@ import {
     StatusBar,
     I18nManager,
     ActivityIndicator,
+    BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -155,6 +156,21 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         });
         setShowMenu(false);
     };
+
+    // Handle Hardware Back Button
+    React.useEffect(() => {
+        const backAction = () => {
+            handleSurrender();
+            return true; // Prevent default behavior
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, []);
 
     const handleActionUse = (card: GameCard) => {
         if (!card.actionEffect) return;
