@@ -1035,7 +1035,16 @@ export class GameService {
         // Switch to defense phase
         gameState.turnPhase = 'defense';
         gameState.currentTurn = defender.odium;
-        defender.movesRemaining = 3; // Defender gets 3 moves
+
+        // Restore defender moves if persisting, otherwise reset to 3
+        if (gameState.pendingAttack.defenderMovesRemaining !== undefined) {
+            defender.movesRemaining = gameState.pendingAttack.defenderMovesRemaining;
+            // Clear it after using so it doesn't get used again incorrectly (though resolved updates it)
+            gameState.pendingAttack.defenderMovesRemaining = undefined;
+        } else {
+            defender.movesRemaining = 3; // New defense sequence gets 3 moves
+        }
+
         gameState.turnStartTime = Date.now();
 
         return { success: true };
@@ -1100,10 +1109,16 @@ export class GameService {
         const attackerId = gameState.pendingAttack.attackerId;
         gameState.pendingAttack = undefined;
 
-        // End turn - switch to defender (who now starts their draw phase)
-        // CRITICAL FIX: Explicitly start turn for the DEFENDER (odium is the defender here)
-        // Do NOT use endTurn() because that toggles the player. We want the CURRENT player (defender) to start their turn.
-        this.startTurn(gameState, odium);
+        // Check if attacker has moves remaining
+        if (attacker.movesRemaining > 0) {
+            // Return control to attacker
+            gameState.currentTurn = attackerId;
+            gameState.turnPhase = 'play';
+            // We usually don't reset turnStartTime here to keep the pressure on
+        } else {
+            // End turn - switch to defender (who now starts their draw phase)
+            this.startTurn(gameState, odium);
+        }
 
         return { success: true, scorerId: attackerId };
     }
@@ -1135,12 +1150,33 @@ export class GameService {
             result = 'blocked';
         }
 
-        // Clear pending attack
-        gameState.pendingAttack = undefined;
+        // Check if attacker has moves remaining
+        if (attacker.movesRemaining > 0) {
+            // Return control to attacker
+            gameState.currentTurn = attackerId;
+            gameState.turnPhase = 'play';
 
-        // End turn - switch to defender (who now starts their draw phase)
-        // CRITICAL FIX: Explicitly start turn for the DEFENDER (odium is the defender here)
-        this.startTurn(gameState, odium);
+            // NEW: If blocked (not a goal), PERSIST the pending attack
+            // This allows attacker to add more power to the existing clash
+            if (result === 'goal') {
+                gameState.pendingAttack = undefined;
+            } else {
+                // Keep pendingAttack (attackSum and defenseSum remain)
+                // We might want to clear defenderSlots/attackerSlots if we wanted fresh cards, 
+                // but user said "points added", so we keep everything.
+
+                // SAVE DEFENDER MOVES (so they don't reset to 3 next time)
+                const defender = this.getPlayer(gameState, odium);
+                if (defender && gameState.pendingAttack) {
+                    gameState.pendingAttack.defenderMovesRemaining = defender.movesRemaining;
+                }
+            }
+        } else {
+            // No moves left for attacker - turn ends
+            gameState.pendingAttack = undefined; // Always clear at end of turn
+            // End turn - switch to defender
+            this.startTurn(gameState, odium);
+        }
 
         return { success: true, result, scorerId: result === 'goal' ? attackerId : undefined };
     }

@@ -933,12 +933,14 @@ export function setupGameSocket(io: Server) {
                         reason: reason,
                     });
                 } else {
-                    io.to(`game:${game.id}`).emit('turn_start', {
-                        playerId: game.currentTurn,
-                        timeLimit: game.turnTimeLimit,
-                        remainingTime: game.turnTimeLimit,
-                        turnStartTime: game.turnStartTime
-                    });
+                    if (game.turnPhase === 'draw') {
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
+                        });
+                    }
                 }
             } else {
                 socket.emit('error', { message: result.message || 'خطأ', code: 'INVALID_ACCEPT' });
@@ -977,12 +979,14 @@ export function setupGameSocket(io: Server) {
                         reason: reason,
                     });
                 } else {
-                    io.to(`game:${game.id}`).emit('turn_start', {
-                        playerId: game.currentTurn,
-                        timeLimit: game.turnTimeLimit,
-                        remainingTime: game.turnTimeLimit,
-                        turnStartTime: game.turnStartTime
-                    });
+                    if (game.turnPhase === 'draw') {
+                        io.to(`game:${game.id}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
+                        });
+                    }
                 }
             } else {
                 socket.emit('error', { message: 'خطأ في إنهاء الدفاع', code: 'INVALID_END_DEFENSE' });

@@ -78,6 +78,7 @@ export interface GameState {
         pontoCard?: GameCard;            // The drawn Ponto card (visible to both)
         defenseSum: number;              // Accumulated defense from revealed defenders
         defenderSlots: number[];         // Slots of revealed defenders (max 3)
+        defenderMovesRemaining?: number; // Moves remaining for defender if phase persists
     };
 
     // Match timer (PRD: 20 minutes)
