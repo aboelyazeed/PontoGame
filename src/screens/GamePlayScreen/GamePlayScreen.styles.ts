@@ -75,8 +75,12 @@ export const styles = StyleSheet.create({
     playerSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        width: '25%',
+        gap: 8,
+        flex: 1,
+    },
+    playerSectionRight: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
     },
     playerSectionReverse: {
         flexDirection: 'row-reverse',
@@ -132,50 +136,39 @@ export const styles = StyleSheet.create({
         color: GAME_COLORS.textPrimary,
     },
     timerSection: {
-        flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        justifyContent: 'center',
+        paddingHorizontal: 8,
     },
-    timerBlock: {
-        alignItems: 'center',
-    },
-    timerLabel: {
-        fontSize: 9,
-        color: 'rgba(9, 170, 9, 0.8)',
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-    },
-    timerLabelGray: {
-        fontSize: 9,
-        color: GAME_COLORS.textSlate,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-    },
-    timerValue: {
-        fontSize: 16,
+    matchTimerText: {
+        fontSize: 18,
         fontWeight: 'bold',
         color: GAME_COLORS.textPrimary,
         fontFamily: 'monospace',
     },
-    timerValueActive: {
-        color: GAME_COLORS.primary,
+    playerName: {
+        fontSize: 11,
+        color: GAME_COLORS.textSecondary,
+        flexShrink: 1,
     },
-    timerValueGray: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: GAME_COLORS.textSlate,
-        fontFamily: 'monospace',
+    playerInfo: {
+        flexShrink: 1,
     },
-    timerDivider: {
-        width: 1,
-        height: 24,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        marginHorizontal: 8,
+    playerInfoRight: {
+        marginLeft: 0,
+        marginRight: 8,
+        alignItems: 'flex-end',
+    },
+    avatarTimerWrapper: {
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 48,
+        height: 48,
+        flexShrink: 0,
+    },
+    timerRingSvg: {
+        position: 'absolute',
     },
 
     // MAIN AREA
