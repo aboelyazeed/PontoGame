@@ -303,6 +303,12 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
             console.error('❌ Game error:', data);
         });
 
+        // Golden Goal started
+        socketService.on('golden_goal_started', (data: { message: string }) => {
+            console.log('⚽🏆 Golden Goal Started:', data.message);
+            // You might want to add a toast or alert here in the UI layer
+        });
+
         return () => {
             socketService.off('game_start');
             socketService.off('game_update');
@@ -315,6 +321,7 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
             socketService.off('attack_result');
             socketService.off('game_end');
             socketService.off('error');
+            socketService.off('golden_goal_started');
         };
     }, [myPlayerId, checkIsMyTurn]);
 

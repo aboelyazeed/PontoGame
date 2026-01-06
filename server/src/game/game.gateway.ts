@@ -107,6 +107,36 @@ export function setupGameSocket(io: Server) {
                         console.log(`⏰ Turn auto-ended. Now ${game.currentTurn}'s turn.`);
                     }
                 }
+
+                // Check match time has expired
+                if (game.matchStartTime && !game.isGoldenGoal) {
+                    const matchElapsed = (now - game.matchStartTime) / 1000;
+
+                    if (matchElapsed >= game.matchTimeLimit) {
+                        console.log(`⏰ Match timeout for game ${gameId}`);
+
+                        const p1Score = game.player1.score;
+                        const p2Score = game.player2?.score || 0;
+
+                        if (p1Score !== p2Score) {
+                            // End game with highest score
+                            const winner = p1Score > p2Score ? game.player1 : game.player2!;
+                            gameService.endGame(game, winner.odium, 'انتهاء الوقت الأصلي');
+                            io.to(`game:${gameId}`).emit('game_end', {
+                                winnerId: winner.odium,
+                                reason: 'انتهاء الوقت الأصلي',
+                            });
+                        } else {
+                            // Golden Goal Mode
+                            game.isGoldenGoal = true;
+                            game.serverTime = Date.now();
+                            io.to(`game:${gameId}`).emit('golden_goal_started', {
+                                message: 'تعادل! الهدف الذهبي يحسم المباراة'
+                            });
+                            io.to(`game:${gameId}`).emit('game_update', game);
+                        }
+                    }
+                }
             });
         }, 1000);
 
@@ -895,11 +925,12 @@ export function setupGameSocket(io: Server) {
                     : null;
 
                 const WINNING_SCORE = 5;
-                if (scorer && scorer.score >= WINNING_SCORE) {
-                    gameService.endGame(game, scorer.odium, 'وصل للنتيجة المطلوبة');
+                if (scorer && (scorer.score >= WINNING_SCORE || game.isGoldenGoal)) {
+                    const reason = game.isGoldenGoal ? 'الهدف الذهبي' : 'وصل للنتيجة المطلوبة';
+                    gameService.endGame(game, scorer.odium, reason);
                     io.to(`game:${game.id}`).emit('game_end', {
                         winnerId: scorer.odium,
-                        reason: 'فوز بالنقاط',
+                        reason: reason,
                     });
                 } else {
                     io.to(`game:${game.id}`).emit('turn_start', {
@@ -938,11 +969,12 @@ export function setupGameSocket(io: Server) {
                     : null;
 
                 const WINNING_SCORE = 5;
-                if (scorer && scorer.score >= WINNING_SCORE) {
-                    gameService.endGame(game, scorer.odium, 'وصل للنتيجة المطلوبة');
+                if (scorer && (scorer.score >= WINNING_SCORE || game.isGoldenGoal)) {
+                    const reason = game.isGoldenGoal ? 'الهدف الذهبي' : 'وصل للنتيجة المطلوبة';
+                    gameService.endGame(game, scorer.odium, reason);
                     io.to(`game:${game.id}`).emit('game_end', {
                         winnerId: scorer.odium,
-                        reason: 'فوز بالنقاط',
+                        reason: reason,
                     });
                 } else {
                     io.to(`game:${game.id}`).emit('turn_start', {
