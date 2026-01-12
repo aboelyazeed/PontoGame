@@ -2,14 +2,22 @@
 // Card Images Mapping
 // ==========================================
 
-// Player Card Images
+// Player Card Images (Common players from Players/Commen folder)
 export const PLAYER_CARD_IMAGES: Record<string, any> = {
-    'GK.png': require('../../assets/Cards/GK.png'),
-    'DF.png': require('../../assets/Cards/DF.png'),
-    'CDM.png': require('../../assets/Cards/CDM.png'),
-    'CAM.png': require('../../assets/Cards/CAM.png'),
-    'FW.png': require('../../assets/Cards/FW.png'),
-    'ST.png': require('../../assets/Cards/ST.png'),
+    'GK': require('../../assets/Cards/Players/Commen/GK.png'),
+    'CB': require('../../assets/Cards/Players/Commen/CB.png'),
+    'CAM': require('../../assets/Cards/Players/Commen/CAM.png'),
+    'CDM': require('../../assets/Cards/Players/Commen/CDM.png'),
+    'FW': require('../../assets/Cards/Players/Commen/FW.png'),
+    'ST': require('../../assets/Cards/Players/Commen/ST.png'),
+    // Legacy mappings for backwards compatibility
+    'GK.png': require('../../assets/Cards/Players/Commen/GK.png'),
+    'DF.png': require('../../assets/Cards/Players/Commen/CB.png'),
+    'CB.png': require('../../assets/Cards/Players/Commen/CB.png'),
+    'CDM.png': require('../../assets/Cards/Players/Commen/CDM.png'),
+    'CAM.png': require('../../assets/Cards/Players/Commen/CAM.png'),
+    'FW.png': require('../../assets/Cards/Players/Commen/FW.png'),
+    'ST.png': require('../../assets/Cards/Players/Commen/ST.png'),
 };
 
 // Ponto Card Images

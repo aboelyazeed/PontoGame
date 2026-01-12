@@ -72,6 +72,17 @@ export interface GameState {
     player1: PlayerState;
     player2: PlayerState | null;
 
+    // Shared decks for the game (cards are removed when drawn)
+    decks?: {
+        playerDeck: GameCard[];
+        actionDeck: GameCard[];
+        pontoDeck: GameCard[];
+        // Discard piles for reshuffling when decks are empty
+        playerDiscard: GameCard[];
+        actionDiscard: GameCard[];
+        pontoDiscard: GameCard[];
+    };
+
     // Attack/Defense phase tracking
     pendingAttack?: {
         attackerId: string;              // Player who initiated attack

@@ -33,52 +33,53 @@ function generateCards(count: number, template: Omit<GameCard, 'id'>): GameCard[
     }));
 }
 
-// PLAYER CARDS
-const GOALKEEPER_CARDS: GameCard[] = generateCards(8, {
+// PLAYER CARDS - 30 total
+// Distribution: 4 GK, 7 CB, 4 CDM, 4 CAM, 7 FW, 4 ST
+const GOALKEEPER_CARDS: GameCard[] = generateCards(4, {
     type: 'player',
     name: 'Goalkeeper',
-    nameAr: 'حارس مرمى',
+    nameAr: 'حارس المرمى',
     position: 'GK',
     attack: 0,
     defense: 8,
     description: 'حارس مرمى متمكن، يصد أقوى الضربات.',
-    imageUrl: 'GK.png',
+    imageUrl: 'GK',
 });
 
-const DEFENDER_CARDS: GameCard[] = generateCards(8, {
+const DEFENDER_CARDS: GameCard[] = generateCards(7, {
     type: 'player',
-    name: 'Defender',
+    name: 'Center Back',
     nameAr: 'مدافع',
     position: 'DF',
     attack: 0,
     defense: 6,
     description: 'تصدّي قوي، يُوقف الهجمات ببراعة، درع صلب.',
-    imageUrl: 'DF.png',
+    imageUrl: 'CB',
 });
 
-const MIDFIELDER_DEF_CARDS: GameCard[] = generateCards(12, {
+const MIDFIELDER_DEF_CARDS: GameCard[] = generateCards(4, {
     type: 'player',
-    name: 'Midfielder (Defensive)',
-    nameAr: 'لاعب وسط',
+    name: 'Central Defensive Midfielder',
+    nameAr: 'لاعب وسط دفاعي',
     position: 'MF',
     attack: 2,
     defense: 3,
     description: 'تحكم بالوسط، يوزع اللعب ويساعد في الدفاع والهجوم ببراعة.',
-    imageUrl: 'CDM.png',
+    imageUrl: 'CDM',
 });
 
-const MIDFIELDER_ATK_CARDS: GameCard[] = generateCards(12, {
+const MIDFIELDER_ATK_CARDS: GameCard[] = generateCards(4, {
     type: 'player',
-    name: 'Midfielder (Attacking)',
-    nameAr: 'لاعب وسط',
+    name: 'Central Attacking Midfielder',
+    nameAr: 'لاعب وسط هجومي',
     position: 'MF',
     attack: 3,
     defense: 2,
     description: 'صانع ألعاب ماهر، يخترق الدفاعات ويصنع فرصاً خطيرة.',
-    imageUrl: 'CAM.png',
+    imageUrl: 'CAM',
 });
 
-const FORWARD_CARDS: GameCard[] = generateCards(8, {
+const FORWARD_CARDS: GameCard[] = generateCards(7, {
     type: 'player',
     name: 'Forward',
     nameAr: 'مهاجم',
@@ -86,7 +87,7 @@ const FORWARD_CARDS: GameCard[] = generateCards(8, {
     attack: 4,
     defense: 0,
     description: 'مهاجم قناص، يمزق الشباك بضرباته القوية.',
-    imageUrl: 'FW.png',
+    imageUrl: 'FW',
 });
 
 const STRIKER_CARDS: GameCard[] = generateCards(4, {
@@ -97,7 +98,7 @@ const STRIKER_CARDS: GameCard[] = generateCards(4, {
     attack: 6,
     defense: 0,
     description: 'رأس حربة شرس، ينهي الهجمات بضربات مباشرة قوية.',
-    imageUrl: 'ST.png',
+    imageUrl: 'ST',
 });
 
 // ACTION CARDS
@@ -230,6 +231,57 @@ const FULL_DECK = {
     pontos: PONTO_CARDS,
 };
 
+// Shuffle helper function
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+// Create a fresh shuffled copy of all decks for a new game
+function createShuffledDecks() {
+    // Create deep copies with unique IDs
+    const playerDeck = shuffleArray(PLAYER_CARDS.map((card, i) => ({
+        ...card,
+        id: `${card.id}_${Date.now()}_${i}`,
+    })));
+    const actionDeck = shuffleArray(ACTION_CARDS.map((card, i) => ({
+        ...card,
+        id: `${card.id}_${Date.now()}_${i}`,
+    })));
+    const pontoDeck = shuffleArray(PONTO_CARDS.map((card, i) => ({
+        ...card,
+        id: `${card.id}_${Date.now()}_${i}`,
+    })));
+    
+    return { 
+        playerDeck, 
+        actionDeck, 
+        pontoDeck,
+        // Empty discard piles - cards go here when used/discarded
+        playerDiscard: [] as GameCard[],
+        actionDiscard: [] as GameCard[],
+        pontoDiscard: [] as GameCard[],
+    };
+}
+
+/**
+ * Reshuffle discard pile back into deck when deck is empty
+ */
+function reshuffleDeck(deck: GameCard[], discardPile: GameCard[]): void {
+    if (discardPile.length === 0) return;
+    
+    // Move all cards from discard pile to deck
+    const reshuffled = shuffleArray([...discardPile]);
+    deck.push(...reshuffled);
+    discardPile.length = 0; // Clear discard pile
+    
+    console.log(`🔄 Reshuffled ${reshuffled.length} cards from discard pile into deck`);
+}
+
 export class GameService {
     // ========================================
     // Active Games Access (for timer monitoring)
@@ -281,6 +333,9 @@ export class GameService {
 
         const gameId = uuidv4();
 
+        // Create shuffled decks for this game
+        const decks = createShuffledDecks();
+
         // Create initial game state
         const gameState: GameState = {
             id: gameId,
@@ -296,12 +351,15 @@ export class GameService {
 
             player1: this.createPlayerState(player1),
             player2: this.createPlayerState(player2),
+            
+            // Shared decks for the game
+            decks,
         };
 
-        // Deal initial hands
-        this.dealCards(gameState.player1);
+        // Deal initial hands from the shared decks
+        this.dealCardsFromDeck(gameState, gameState.player1);
         if (gameState.player2) {
-            this.dealCards(gameState.player2);
+            this.dealCardsFromDeck(gameState, gameState.player2);
         }
 
         // Store game
@@ -342,6 +400,32 @@ export class GameService {
             lockedSlots: [], // Slots locked by Biter
             nextAttackCancelled: false, // VAR effect
         };
+    }
+
+    /**
+     * Deal initial cards to a player from the shared decks (5 field cards + 2 hand + 3 actions)
+     */
+    private dealCardsFromDeck(gameState: GameState, player: PlayerState): void {
+        if (!gameState.decks) return;
+
+        // Draw 5 player cards for field (face down)
+        for (let i = 0; i < 5 && gameState.decks.playerDeck.length > 0; i++) {
+            const card = gameState.decks.playerDeck.pop()!;
+            card.isRevealed = false;
+            player.field[i] = card;
+        }
+
+        // Draw 2 player cards for hand
+        for (let i = 0; i < 2 && gameState.decks.playerDeck.length > 0; i++) {
+            const card = gameState.decks.playerDeck.pop()!;
+            player.hand.push(card);
+        }
+
+        // Draw 3 action cards for hand
+        for (let i = 0; i < 3 && gameState.decks.actionDeck.length > 0; i++) {
+            const card = gameState.decks.actionDeck.pop()!;
+            player.hand.push(card);
+        }
     }
 
     // ========================================
@@ -496,8 +580,13 @@ export class GameService {
 
         // Add player 2
         room.player2 = this.createPlayerState(player);
-        this.dealCards(room.player1);
-        this.dealCards(room.player2);
+        
+        // Initialize shared decks for the game
+        room.decks = createShuffledDecks();
+        
+        // Deal initial hands from the shared decks
+        this.dealCardsFromDeck(room, room.player1);
+        this.dealCardsFromDeck(room, room.player2);
 
         // Move from rooms to active games
         activeRooms.delete(gameId);
@@ -596,28 +685,47 @@ export class GameService {
         }
         if (player.movesRemaining < 1) return { success: false, drawnCards: [] };
 
+        // Ensure decks exist
+        if (!gameState.decks) {
+            // Fallback: create decks if they don't exist (legacy games)
+            gameState.decks = createShuffledDecks();
+        }
+
         const drawnCards: GameCard[] = [];
-        let sourcePool: GameCard[] = [];
+        let deck: GameCard[];
+        let discardPile: GameCard[];
 
         switch (cardType) {
             case 'player':
-                sourcePool = [...PLAYER_CARDS];
+                deck = gameState.decks.playerDeck;
+                discardPile = gameState.decks.playerDiscard;
                 break;
             case 'action':
-                sourcePool = [...ACTION_CARDS];
+                deck = gameState.decks.actionDeck;
+                discardPile = gameState.decks.actionDiscard;
                 break;
             case 'ponto':
                 // RESTRICTION: Ponto cards cannot be drawn manually using generic drawCards.
                 // They are only drawn during attack phase specific step (via drawPonto) or via Action Cards effects.
                 return { success: false, drawnCards: [] };
+            default:
+                return { success: false, drawnCards: [] };
         }
 
-        for (let i = 0; i < count && sourcePool.length > 0; i++) {
-            const idx = Math.floor(Math.random() * sourcePool.length);
-            const drawn = { ...sourcePool.splice(idx, 1)[0] };
-            drawn.id = `${drawn.id}_drawn_${Date.now()}_${i}`;
-            player.hand.push(drawn);
-            drawnCards.push(drawn);
+        // Draw cards from the shared deck
+        for (let i = 0; i < count; i++) {
+            // Reshuffle if deck is empty
+            if (deck.length === 0) {
+                reshuffleDeck(deck, discardPile);
+                if (deck.length === 0) {
+                    // No cards available even after reshuffle
+                    break;
+                }
+            }
+            
+            const card = deck.pop()!;
+            player.hand.push(card);
+            drawnCards.push(card);
         }
 
         // Deduct move (1 move for drawing)
@@ -678,12 +786,18 @@ export class GameService {
         const handCard = player.hand[handCardIndex];
         handCard.isRevealed = false; // Placed face-down on field
 
-        // Check conditions: If field card is revealed, it goes back to "deck" (discarded)
+        // Check conditions: If field card is revealed, it goes to discard pile
         if (fieldCard.isRevealed) {
             // Move Hand Card to Field
             player.field[fieldSlotIndex] = handCard;
-            // Remove Hand Card from Hand (it moved to field) and discard Field Card (don't put in hand)
+            // Remove Hand Card from Hand (it moved to field)
             player.hand.splice(handCardIndex, 1);
+            
+            // Add revealed field card to discard pile (for reshuffling)
+            if (gameState.decks && fieldCard.type === 'player') {
+                gameState.decks.playerDiscard.push(fieldCard);
+                console.log(`♻️ Player card "${fieldCard.nameAr}" added to discard pile (swap)`);
+            }
         } else {
             // Normal Swap for unrevealed cards
             fieldCard.isRevealed = false;
@@ -743,10 +857,19 @@ export class GameService {
             return { success: false, message: 'المكان مشغول' };
         }
 
-        // Remove discard cards (in reverse order to maintain indices)
+        // Remove discard cards (in reverse order to maintain indices) and add to discard piles
         discardIndices.sort((a, b) => b - a);
         for (const idx of discardIndices) {
-            player.hand.splice(idx, 1);
+            const discardedCard = player.hand.splice(idx, 1)[0];
+            // Add to appropriate discard pile
+            if (gameState.decks && discardedCard) {
+                if (discardedCard.type === 'player') {
+                    gameState.decks.playerDiscard.push(discardedCard);
+                } else if (discardedCard.type === 'action') {
+                    gameState.decks.actionDiscard.push(discardedCard);
+                }
+                console.log(`♻️ Discarded "${discardedCard.nameAr}" for legendary summon`);
+            }
         }
 
         // Remove legendary from hand and place on field
@@ -883,8 +1006,14 @@ export class GameService {
                 // Store slot for locking after attack resolves
                 biterSlot = targetData.slotIndex1;
                 // Remove the card and lock the slot immediately
+                const removedBiterCard = player.field[targetData.slotIndex1];
                 player.field[targetData.slotIndex1] = null;
                 player.lockedSlots.push(targetData.slotIndex1);
+                // Add to discard pile
+                if (removedBiterCard && gameState.decks) {
+                    gameState.decks.playerDiscard.push(removedBiterCard);
+                    console.log(`♻️ Biter card discarded`);
+                }
                 break;
 
             case 'red_card': // كارت أحمر: Eject any attacking player from opponent
@@ -910,6 +1039,11 @@ export class GameService {
                 );
                 // Remove the card from field (slot remains open/usable)
                 opponent.field[targetData.slotIndex1] = null;
+                // Add to discard pile
+                if (gameState.decks) {
+                    gameState.decks.playerDiscard.push(targetCard);
+                    console.log(`♻️ Red card: "${targetCard.nameAr}" ejected to discard pile`);
+                }
                 break;
 
             case 'yellow_card': // كارت أصفر: -2 Attack for current attack, 2 yellows = eject
@@ -941,6 +1075,11 @@ export class GameService {
                     );
                     // Remove card from field (slot remains open)
                     opponent.field[targetData.slotIndex1] = null;
+                    // Add to discard pile
+                    if (gameState.decks) {
+                        gameState.decks.playerDiscard.push(yellowTargetCard);
+                        console.log(`♻️ 2nd Yellow: "${yellowTargetCard.nameAr}" ejected to discard pile`);
+                    }
                 }
                 break;
 
@@ -987,8 +1126,11 @@ export class GameService {
                 return { success: false, message: 'تأثير غير معروف' };
         }
 
-        // Remove card from hand (goes to discard pile)
-        player.hand.splice(cardIndex, 1);
+        // Remove card from hand and add to discard pile
+        const usedCard = player.hand.splice(cardIndex, 1)[0];
+        if (gameState.decks && usedCard.type === 'action') {
+            gameState.decks.actionDiscard.push(usedCard);
+        }
 
         // Deduct move (all action cards cost 1 move)
         player.movesRemaining -= 1;
@@ -997,13 +1139,30 @@ export class GameService {
     }
 
     /**
-     * Draw a random Ponto card
+     * Draw a random Ponto card from the shared deck
      */
-    drawPontoCard(): GameCard {
+    drawPontoCard(gameState: GameState): GameCard {
+        // Ensure decks exist
+        if (!gameState.decks) {
+            gameState.decks = createShuffledDecks();
+        }
+        
+        // Reshuffle if ponto deck is empty
+        if (gameState.decks.pontoDeck.length === 0) {
+            reshuffleDeck(gameState.decks.pontoDeck, gameState.decks.pontoDiscard);
+        }
+        
+        // Draw from the shared ponto deck
+        if (gameState.decks.pontoDeck.length > 0) {
+            return gameState.decks.pontoDeck.pop()!;
+        }
+        
+        // Fallback: if deck is still empty (shouldn't happen), create a temporary card
+        console.warn('⚠️ Ponto deck empty even after reshuffle - creating fallback card');
         const template = PONTO_CARDS[Math.floor(Math.random() * PONTO_CARDS.length)];
         return {
             ...template,
-            id: uuidv4(),
+            id: `${template.id}_fallback_${Date.now()}`,
         };
     }
 
@@ -1116,7 +1275,7 @@ export class GameService {
         }
         player.movesRemaining -= 1;
 
-        const pontoCard = this.drawPontoCard();
+        const pontoCard = this.drawPontoCard(gameState);
         gameState.pendingAttack.pontoCard = pontoCard;
         gameState.pendingAttack.attackSum += (pontoCard.attack || 0);
 
@@ -1220,6 +1379,13 @@ export class GameService {
         // Attacker scores +1 goal
         attacker.score += 1;
 
+        // Add ponto card to discard pile
+        const pontoCard = gameState.pendingAttack.pontoCard;
+        if (pontoCard && gameState.decks) {
+            gameState.decks.pontoDiscard.push(pontoCard);
+            console.log(`🎴 Ponto +${pontoCard.attack} added to discard pile (goal accepted)`);
+        }
+
         // Clear pending attack
         const attackerId = gameState.pendingAttack.attackerId;
         gameState.pendingAttack = undefined;
@@ -1250,7 +1416,7 @@ export class GameService {
         if (gameState.turnPhase !== 'defense') return { success: false };
         if (!gameState.pendingAttack) return { success: false };
 
-        const { attackerId, attackSum, defenseSum } = gameState.pendingAttack;
+        const { attackerId, attackSum, defenseSum, pontoCard } = gameState.pendingAttack;
         const attacker = this.getPlayer(gameState, attackerId);
         if (!attacker) return { success: false };
 
@@ -1265,6 +1431,14 @@ export class GameService {
             result = 'blocked';
         }
 
+        // Helper to discard the ponto card
+        const discardPontoCard = () => {
+            if (pontoCard && gameState.decks) {
+                gameState.decks.pontoDiscard.push(pontoCard);
+                console.log(`🎴 Ponto +${pontoCard.attack} added to discard pile`);
+            }
+        };
+
         // Check if attacker has moves remaining
         if (attacker.movesRemaining > 0) {
             // Return control to attacker
@@ -1274,6 +1448,7 @@ export class GameService {
             // NEW: If blocked (not a goal), PERSIST the pending attack
             // This allows attacker to add more power to the existing clash
             if (result === 'goal') {
+                discardPontoCard();
                 gameState.pendingAttack = undefined;
             } else {
                 // Keep pendingAttack (attackSum and defenseSum remain)
@@ -1288,6 +1463,7 @@ export class GameService {
             }
         } else {
             // No moves left for attacker - turn ends
+            discardPontoCard();
             gameState.pendingAttack = undefined; // Always clear at end of turn
             // End turn - switch to defender
             this.startTurn(gameState, odium);
@@ -1345,13 +1521,24 @@ export class GameService {
         const player = this.getPlayer(gameState, odium);
         if (!player) return { success: false, message: 'لاعب غير موجود' };
 
-        const deck = deckType === 'player' ? PLAYER_CARDS : ACTION_CARDS;
-        const template = deck[Math.floor(Math.random() * deck.length)];
-        const drawnCard: GameCard = {
-            ...template,
-            id: uuidv4(),
-        };
+        // Ensure decks exist
+        if (!gameState.decks) {
+            gameState.decks = createShuffledDecks();
+        }
 
+        // Get the appropriate deck and discard pile
+        const deck = deckType === 'player' ? gameState.decks.playerDeck : gameState.decks.actionDeck;
+        const discardPile = deckType === 'player' ? gameState.decks.playerDiscard : gameState.decks.actionDiscard;
+        
+        // Reshuffle if deck is empty
+        if (deck.length === 0) {
+            reshuffleDeck(deck, discardPile);
+            if (deck.length === 0) {
+                return { success: false, message: 'الكومة فارغة ولا توجد كروت في المرتجعات' };
+            }
+        }
+
+        const drawnCard = deck.pop()!;
         player.hand.push(drawnCard);
         gameState.drawsRemaining -= 1;
 
