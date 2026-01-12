@@ -10,10 +10,14 @@ import {
     Animated,
     Dimensions,
     I18nManager,
+    Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+
+// Ponto Logo
+const PontoLogo = require('../../assets/Ponto Logo.png');
+const SplashFooter = require('../../assets/splashfooter.png');
 
 // Force RTL
 I18nManager.forceRTL(true);
@@ -124,42 +128,27 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
                     },
                 ]}
             >
-                {/* Logo container with glow */}
-                <View style={styles.logoContainer}>
-                    {/* Glow behind logo */}
-                    <View style={styles.logoGlow} />
-
-                    {/* Logo box */}
-                    <View style={styles.logoBox}>
-                        {/* Soccer ball icon */}
-                        <MaterialCommunityIcons
-                            name="soccer"
-                            size={64}
-                            color={COLORS.primary}
-                        />
-
-                        {/* Playing cards overlay */}
-                        <View style={styles.cardsOverlay}>
-                            <FontAwesome5
-                                name="crown"
-                                size={24}
-                                color="rgba(255, 255, 255, 0.1)"
-                            />
-                        </View>
-                    </View>
-                </View>
-
-                {/* Title */}
+                {/* Title with Ponto Logo */}
                 <View style={styles.titleContainer}>
-                    <Text style={styles.title}>
-                        بونطو
-                    </Text>
+                    {/* Ponto Logo instead of text */}
+                    <Image
+                        source={PontoLogo}
+                        style={styles.logoImage}
+                        resizeMode="contain"
+                    />
                     <Text style={styles.subtitle}>
                         <Text style={styles.titleDot}>.</Text>
                         لعبة كروت كورة أونلاين
                     </Text>
                 </View>
             </Animated.View>
+
+            {/* Footer image with cards */}
+            <Image
+                source={SplashFooter}
+                style={styles.footerImage}
+                resizeMode="contain"
+            />
 
             {/* Bottom section */}
             <View style={styles.bottomSection}>
@@ -224,63 +213,39 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
         paddingHorizontal: SPACING.lg,
+        paddingTop: height * 0.15,
         gap: SPACING.lg,
     },
-    logoContainer: {
-        position: 'relative',
-        marginBottom: SPACING.md,
-    },
-    logoGlow: {
-        position: 'absolute',
-        top: -8,
-        left: -8,
-        right: -8,
-        bottom: -8,
-        backgroundColor: COLORS.primary,
-        borderRadius: BORDER_RADIUS.xl + 8,
-        opacity: 0.2,
-    },
-    logoBox: {
-        width: 128,
-        height: 128,
-        backgroundColor: COLORS.backgroundDark,
-        borderWidth: 1,
-        borderColor: COLORS.cardBorder,
-        borderRadius: BORDER_RADIUS.xl,
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-    },
-    cardsOverlay: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-        transform: [{ rotate: '-12deg' }],
+    logoImage: {
+        width: 350,
+        height: 175,
     },
     titleContainer: {
         alignItems: 'center',
-        gap: SPACING.xs,
-    },
-    title: {
-        fontSize: 56,
-        fontWeight: '900',
-        color: COLORS.textPrimary,
-        letterSpacing: -1,
+        gap: SPACING.md,
     },
     titleDot: {
-        fontSize: 56,
+        fontSize: 70,
         fontWeight: '900',
         color: COLORS.primary,
     },
     subtitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '500',
         color: '#9db99d',
         opacity: 0.9,
         letterSpacing: 0.5,
+    },
+    footerImage: {
+        width: width - 40,
+        height: height * 0.4,
+        position: 'absolute',
+        bottom: 80,
+        left: 20,
+        right: 20,
     },
     bottomSection: {
         width: '100%',
