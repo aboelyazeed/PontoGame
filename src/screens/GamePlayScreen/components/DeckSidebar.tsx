@@ -3,9 +3,10 @@
 // ==========================================
 
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { styles, GAME_COLORS } from '../GamePlayScreen.styles';
+import { CARD_BACK_IMAGES } from '../../../constants/cardImages';
 
 interface DeckSidebarProps {
     position: 'left' | 'right';
@@ -67,16 +68,19 @@ const DeckSidebar: React.FC<DeckSidebarProps> = ({
     return (
         <View style={styles.deckSidebarRight}>
             <TouchableOpacity
-                style={[styles.deckCard, isAttackPontoNeeded && styles.deckCardActive]}
+                style={[
+                    styles.pontoDeckCard,
+                    isAttackPontoNeeded && styles.pontoDeckCardActive,
+                ]}
                 onPress={() => onDrawPonto?.()}
                 disabled={!isAttackPontoNeeded}
             >
-                <MaterialCommunityIcons
-                    name="diamond"
-                    size={20}
-                    color={isAttackPontoNeeded ? GAME_COLORS.ponto : "rgba(255,255,255,0.2)"}
+                <Image
+                    source={CARD_BACK_IMAGES.ponto}
+                    style={styles.pontoDeckImage}
+                    resizeMode="cover"
                 />
-                <Text style={[styles.deckLabel, isAttackPontoNeeded && styles.deckLabelActive]}>بونتو</Text>
+                <Text style={[styles.deckLabel, isAttackPontoNeeded && styles.deckLabelActive]}>بونطو</Text>
             </TouchableOpacity>
         </View>
     );

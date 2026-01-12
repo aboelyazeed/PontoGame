@@ -5,7 +5,7 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { styles, GAME_COLORS } from '../GamePlayScreen.styles';
-import { CARD_IMAGES } from '../../../constants/cardImages';
+import { PONTO_CARD_IMAGES } from '../../../constants/cardImages';
 
 interface PendingAttack {
     attackerId: string;
@@ -78,9 +78,9 @@ const CenterZone: React.FC<CenterZoneProps> = ({
                         <View style={styles.pontoCardDisplay}>
                             <Image
                                 source={
-                                    pendingAttack.pontoCard.imageUrl && CARD_IMAGES[pendingAttack.pontoCard.imageUrl]
-                                        ? CARD_IMAGES[pendingAttack.pontoCard.imageUrl]
-                                        : CARD_IMAGES['FW.png']
+                                    pendingAttack.pontoCard.attack
+                                        ? PONTO_CARD_IMAGES[pendingAttack.pontoCard.attack]
+                                        : PONTO_CARD_IMAGES[1]
                                 }
                                 style={styles.pontoCardImage}
                                 resizeMode="contain"

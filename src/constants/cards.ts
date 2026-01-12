@@ -230,11 +230,22 @@ export const ACTION_CARD_TEMPLATES: ActionCardTemplate[] = [
 ];
 
 // ==========================================
-// Ponto Card Values
+// Ponto Card Configuration
 // ==========================================
 
+// Ponto deck: 8 cards total
+// 2x +5, 2x +4, 2x +3, 1x +2, 1x +1
+export const PONTO_CARD_DISTRIBUTION: { value: number; count: number }[] = [
+    { value: 5, count: 2 },
+    { value: 4, count: 2 },
+    { value: 3, count: 2 },
+    { value: 2, count: 1 },
+    { value: 1, count: 1 },
+];
+
+// Legacy exports for backwards compatibility
 export const PONTO_VALUES = [1, 2, 3, 4, 5] as const;
-export const PONTO_CARDS_PER_VALUE = 5;
+export const PONTO_CARDS_PER_VALUE = 5; // Deprecated - use PONTO_CARD_DISTRIBUTION
 
 // ==========================================
 // Deck Generation Functions
@@ -310,13 +321,14 @@ export function generateActionCardDeck(): ActionCard[] {
 export function generatePontoCardDeck(): PontoCard[] {
     const deck: PontoCard[] = [];
 
-    PONTO_VALUES.forEach((value) => {
-        for (let i = 0; i < PONTO_CARDS_PER_VALUE; i++) {
+    // Use the correct distribution: 2x +5, 2x +4, 2x +3, 1x +2, 1x +1
+    PONTO_CARD_DISTRIBUTION.forEach(({ value, count }) => {
+        for (let i = 0; i < count; i++) {
             deck.push({
                 id: generateId(),
                 type: CardType.PONTO,
-                name: `Ponto ${value}`,
-                nameAr: `بونطو ${value}`,
+                name: `Ponto +${value}`,
+                nameAr: `بونطو +${value}`,
                 value,
             });
         }

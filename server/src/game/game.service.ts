@@ -118,13 +118,22 @@ const ACTION_CARDS: GameCard[] = [
     { id: 'act_yellow_2', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد', actionEffect: 'yellow_card' },
 ];
 
-// PONTO CARDS (5 of each value)
+// PONTO CARDS - 8 total cards
+// Distribution: 2x +5, 2x +4, 2x +3, 1x +2, 1x +1
 const PONTO_CARDS: GameCard[] = [
-    ...generateCards(5, { type: 'ponto', name: 'Ponto +1', nameAr: 'بونطو +1', attack: 1 }),
-    ...generateCards(5, { type: 'ponto', name: 'Ponto +2', nameAr: 'بونطو +2', attack: 2 }),
-    ...generateCards(5, { type: 'ponto', name: 'Ponto +3', nameAr: 'بونطو +3', attack: 3 }),
-    ...generateCards(5, { type: 'ponto', name: 'Ponto +4', nameAr: 'بونطو +4', attack: 4 }),
-    ...generateCards(5, { type: 'ponto', name: 'Ponto +5', nameAr: 'بونطو +5', attack: 5 }),
+    // +5 (2 cards)
+    { id: 'ponto_5_1', type: 'ponto', name: 'Ponto +5', nameAr: 'بونطو +5', attack: 5, imageUrl: 'Ponto +5.png' },
+    { id: 'ponto_5_2', type: 'ponto', name: 'Ponto +5', nameAr: 'بونطو +5', attack: 5, imageUrl: 'Ponto +5.png' },
+    // +4 (2 cards)
+    { id: 'ponto_4_1', type: 'ponto', name: 'Ponto +4', nameAr: 'بونطو +4', attack: 4, imageUrl: 'Ponto +4.png' },
+    { id: 'ponto_4_2', type: 'ponto', name: 'Ponto +4', nameAr: 'بونطو +4', attack: 4, imageUrl: 'Ponto +4.png' },
+    // +3 (2 cards)
+    { id: 'ponto_3_1', type: 'ponto', name: 'Ponto +3', nameAr: 'بونطو +3', attack: 3, imageUrl: 'Ponto +3.png' },
+    { id: 'ponto_3_2', type: 'ponto', name: 'Ponto +3', nameAr: 'بونطو +3', attack: 3, imageUrl: 'Ponto +3.png' },
+    // +2 (1 card)
+    { id: 'ponto_2_1', type: 'ponto', name: 'Ponto +2', nameAr: 'بونطو +2', attack: 2, imageUrl: 'Ponto +2.png' },
+    // +1 (1 card)
+    { id: 'ponto_1_1', type: 'ponto', name: 'Ponto +1', nameAr: 'بونطو +1', attack: 1, imageUrl: 'Ponto +1.png' },
 ];
 
 // LEGENDARY PLAYER CARDS (PRD Section 9) - 1 of each

@@ -3,9 +3,10 @@
 // ==========================================
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, I18nManager } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, I18nManager, Image } from 'react-native';
 import { Card, CardType, PlayerCard, ActionCard, PontoCard } from '../../types';
 import { POSITION_COLORS } from '../../constants/cards';
+import { PONTO_CARD_IMAGES, CARD_BACK_IMAGES } from '../../constants/cardImages';
 
 // Enable RTL
 I18nManager.forceRTL(true);
@@ -33,6 +34,19 @@ const CardComponent: React.FC<CardComponentProps> = ({
 
     const { width, height } = dimensions[size];
 
+    // Get the appropriate card back image based on card type
+    const getCardBackImage = () => {
+        switch (card.type) {
+            case CardType.PONTO:
+                return CARD_BACK_IMAGES.ponto;
+            case CardType.ACTION:
+                return CARD_BACK_IMAGES.action;
+            case CardType.PLAYER:
+            default:
+                return CARD_BACK_IMAGES.player;
+        }
+    };
+
     if (isHidden) {
         return (
             <TouchableOpacity
@@ -44,7 +58,11 @@ const CardComponent: React.FC<CardComponentProps> = ({
                 onPress={onPress}
                 activeOpacity={0.8}
             >
-                <Text style={styles.cardBackText}>🎴</Text>
+                <Image
+                    source={getCardBackImage()}
+                    style={styles.cardBackImage}
+                    resizeMode="cover"
+                />
             </TouchableOpacity>
         );
     }
@@ -125,6 +143,19 @@ const CardComponent: React.FC<CardComponentProps> = ({
     };
 
     const renderPontoCard = (pontoCard: PontoCard) => {
+        const pontoImage = PONTO_CARD_IMAGES[pontoCard.value];
+        
+        if (pontoImage) {
+            return (
+                <Image
+                    source={pontoImage}
+                    style={styles.pontoCardImage}
+                    resizeMode="cover"
+                />
+            );
+        }
+        
+        // Fallback to styled text if image not found
         return (
             <View style={[styles.cardContent, styles.pontoCardContent]}>
                 <Text style={styles.pontoValue}>+{pontoCard.value}</Text>
@@ -190,6 +221,11 @@ const styles = StyleSheet.create({
     },
     cardBackText: {
         fontSize: 32,
+    },
+    cardBackImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 6,
     },
     selected: {
         borderColor: '#FFD700',
@@ -280,13 +316,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     pontoCard: {
-        backgroundColor: '#fff3e0',
-        borderColor: '#FF9800',
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
     },
     pontoValue: {
         fontSize: 28,
         fontWeight: 'bold',
         color: '#FF9800',
+    },
+    pontoCardImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 6,
     },
 });
 

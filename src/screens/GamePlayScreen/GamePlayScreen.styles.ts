@@ -224,6 +224,33 @@ export const styles = StyleSheet.create({
     deckLabelActive: {
         color: GAME_COLORS.primary,
     },
+    // Ponto Deck with Image
+    pontoDeckCard: {
+        width: 56,
+        aspectRatio: 1, // Square like the original Ponto Back.png
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        opacity: 0.5,
+    },
+    pontoDeckCardActive: {
+        borderColor: GAME_COLORS.ponto,
+        borderWidth: 2,
+        opacity: 1,
+        shadowColor: GAME_COLORS.ponto,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    pontoDeckImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 6,
+    },
     drawsRemainingBadge: {
         backgroundColor: GAME_COLORS.primary,
         paddingHorizontal: 8,
@@ -538,7 +565,7 @@ export const styles = StyleSheet.create({
         zIndex: 30,
     },
     pontoCardImage: {
-        width: 40,
+        width: 56,
         height: 56,
         borderRadius: 4,
         backgroundColor: GAME_COLORS.surfaceLighter,
