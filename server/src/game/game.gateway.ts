@@ -93,9 +93,45 @@ export function setupGameSocket(io: Server) {
                 if (elapsedSeconds >= game.turnTimeLimit) {
                     console.log(`⏰ Turn timeout for game ${gameId} - Player ${game.currentTurn}`);
 
-                    // Auto-end the turn
-                    const success = gameService.endTurn(game, game.currentTurn);
-                    if (success) {
+                    // SPECIAL CASE: Defense phase timeout = attacker scores
+                    if (game.turnPhase === 'defense' && game.pendingAttack) {
+                        console.log(`⏰ Defense timeout - Attacker scores automatically!`);
+                        
+                        // Attacker gets the goal
+                        const attacker = game.player1.odium === game.pendingAttack.attackerId 
+                            ? game.player1 
+                            : game.player2!;
+                        attacker.score += 1;
+
+                        // Add ponto card to discard
+                        const pontoCard = game.pendingAttack.pontoCard;
+                        if (pontoCard && game.decks) {
+                            game.decks.pontoDiscard.push(pontoCard);
+                        }
+
+                        // Clear the pending attack
+                        game.pendingAttack = undefined;
+
+                        // Emit goal scored event
+                        io.to(`game:${gameId}`).emit('goal_scored', {
+                            scorerId: attacker.odium,
+                            reason: 'انتهاء وقت الدفاع'
+                        });
+
+                        // Check win condition
+                        const WINNING_SCORE = 5;
+                        if (attacker.score >= WINNING_SCORE || game.isGoldenGoal) {
+                            const reason = game.isGoldenGoal ? 'الهدف الذهبي' : 'وصل للنتيجة المطلوبة';
+                            gameService.endGame(game, attacker.odium, reason);
+                            io.to(`game:${gameId}`).emit('game_end', {
+                                winnerId: attacker.odium,
+                                reason: reason,
+                            });
+                            return; // Don't continue with turn logic
+                        }
+
+                        // Start defender's new turn (they now get a fresh turn)
+                        gameService.startTurn(game, game.currentTurn);
                         game.serverTime = Date.now();
                         io.to(`game:${gameId}`).emit('game_update', game);
                         io.to(`game:${gameId}`).emit('turn_start', {
@@ -104,7 +140,56 @@ export function setupGameSocket(io: Server) {
                             remainingTime: game.turnTimeLimit,
                             turnStartTime: game.turnStartTime
                         });
-                        console.log(`⏰ Turn auto-ended. Now ${game.currentTurn}'s turn.`);
+                        console.log(`⏰ Defender ${game.currentTurn} starts fresh turn after timeout.`);
+                    } 
+                    // CASE 2: Attacker's turn times out while there's still a pending attack
+                    // (e.g., attack was blocked, turn returned to attacker, but time ran out)
+                    else if (game.pendingAttack && game.pendingAttack.attackerId === game.currentTurn) {
+                        console.log(`⏰ Attacker timeout with pending attack - Attack cancelled!`);
+                        
+                        // Add ponto card to discard
+                        const pontoCard = game.pendingAttack.pontoCard;
+                        if (pontoCard && game.decks) {
+                            game.decks.pontoDiscard.push(pontoCard);
+                        }
+
+                        // Clear the pending attack (remove scoreboard from center)
+                        game.pendingAttack = undefined;
+
+                        // Emit attack cancelled event
+                        io.to(`game:${gameId}`).emit('attack_cancelled', {
+                            reason: 'انتهاء وقت المهاجم'
+                        });
+
+                        // Switch to defender's turn
+                        const isPlayer1 = game.player1.odium === game.currentTurn;
+                        const nextPlayer = isPlayer1 ? game.player2! : game.player1;
+                        gameService.startTurn(game, nextPlayer.odium);
+                        
+                        game.serverTime = Date.now();
+                        io.to(`game:${gameId}`).emit('game_update', game);
+                        io.to(`game:${gameId}`).emit('turn_start', {
+                            playerId: game.currentTurn,
+                            timeLimit: game.turnTimeLimit,
+                            remainingTime: game.turnTimeLimit,
+                            turnStartTime: game.turnStartTime
+                        });
+                        console.log(`⏰ Attack cancelled. Now ${game.currentTurn}'s turn.`);
+                    }
+                    else {
+                        // Normal turn timeout - just end turn
+                        const success = gameService.endTurn(game, game.currentTurn);
+                        if (success) {
+                            game.serverTime = Date.now();
+                            io.to(`game:${gameId}`).emit('game_update', game);
+                            io.to(`game:${gameId}`).emit('turn_start', {
+                                playerId: game.currentTurn,
+                                timeLimit: game.turnTimeLimit,
+                                remainingTime: game.turnTimeLimit,
+                                turnStartTime: game.turnStartTime
+                            });
+                            console.log(`⏰ Turn auto-ended. Now ${game.currentTurn}'s turn.`);
+                        }
                     }
                 }
 
