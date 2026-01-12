@@ -78,7 +78,7 @@ const FieldSlot: React.FC<FieldSlotProps> = ({
             onPress={handlePress}
             disabled={disabled}
         >
-            <View style={[styles.slotCardFilled, card.isRevealed && { opacity: 0.7 }]}>
+            <View style={[styles.slotCardFilled, card.isRevealed && { opacity: 0.35 }]}>
                 {cardImage && (
                     <Image source={cardImage} style={styles.slotCardImage} resizeMode="cover" />
                 )}
