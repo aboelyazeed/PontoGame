@@ -4,7 +4,6 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { styles, GAME_COLORS } from '../GamePlayScreen.styles';
 import { CARD_BACK_IMAGES } from '../../../constants/cardImages';
 
@@ -35,28 +34,28 @@ const DeckSidebar: React.FC<DeckSidebarProps> = ({
             <View style={styles.deckSidebarLeft}>
                 {/* Player Deck */}
                 <TouchableOpacity
-                    style={[styles.deckCard, isActive && styles.deckCardActive]}
+                    style={[styles.deckCardContainer, isActive && styles.deckCardContainerActive]}
                     onPress={() => onDrawFromDeck?.('player')}
                     disabled={!isMyTurn || turnPhase !== 'draw'}
                 >
-                    <Ionicons
-                        name="people"
-                        size={20}
-                        color={isActive ? GAME_COLORS.primary : 'rgba(255,255,255,0.2)'}
+                    <Image
+                        source={CARD_BACK_IMAGES.player}
+                        style={styles.deckCardImage}
+                        resizeMode="cover"
                     />
                     <Text style={[styles.deckLabel, isActive && styles.deckLabelActive]}>لاعبين</Text>
                 </TouchableOpacity>
 
                 {/* Action Deck */}
                 <TouchableOpacity
-                    style={[styles.deckCard, isActive && styles.deckCardActive]}
+                    style={[styles.deckCardContainer, isActive && styles.deckCardContainerActive]}
                     onPress={() => onDrawFromDeck?.('action')}
                     disabled={!isMyTurn || turnPhase !== 'draw'}
                 >
-                    <MaterialIcons
-                        name="flash-on"
-                        size={20}
-                        color={isActive ? GAME_COLORS.warning : 'rgba(255,255,255,0.2)'}
+                    <Image
+                        source={CARD_BACK_IMAGES.action}
+                        style={styles.deckCardImage}
+                        resizeMode="cover"
                     />
                     <Text style={[styles.deckLabel, isActive && styles.deckLabelActive]}>أكشن</Text>
                 </TouchableOpacity>

@@ -209,6 +209,31 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    // Player & Action Deck with Images
+    deckCardContainer: {
+        width: 52,
+        aspectRatio: 2 / 3, // Standard card aspect ratio
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    deckCardContainerActive: {
+        borderColor: GAME_COLORS.primary,
+        borderWidth: 2,
+        shadowColor: GAME_COLORS.primary,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    deckCardImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 6,
+    },
     deckLabel: {
         position: 'absolute',
         bottom: -14,
@@ -341,6 +366,11 @@ export const styles = StyleSheet.create({
     slotCardImage: {
         width: '100%',
         height: '100%',
+    },
+    opponentCardBackImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 6,
     },
     slotCardOverlay: {
         position: 'absolute',

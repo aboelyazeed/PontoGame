@@ -7,6 +7,7 @@ import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { styles, GAME_COLORS } from '../GamePlayScreen.styles';
 import { GameCard } from '../../../hooks/useGameLogic';
 import { getCardImage } from '../../../utils/cardUtils';
+import { CARD_BACK_IMAGES } from '../../../constants/cardImages';
 
 interface FieldSlotProps {
     card: GameCard | null;
@@ -47,7 +48,7 @@ const FieldSlot: React.FC<FieldSlotProps> = ({
         );
     }
 
-    // Opponent's face-down card
+    // Opponent's face-down card - show player card back image
     if (isOpponent && card.isRevealed === false) {
         return (
             <TouchableOpacity
@@ -56,9 +57,11 @@ const FieldSlot: React.FC<FieldSlotProps> = ({
                 onPress={handlePress}
                 disabled={disabled}
             >
-                <View style={styles.cardBack}>
-                    <View style={styles.cardBackCircle} />
-                </View>
+                <Image
+                    source={CARD_BACK_IMAGES.player}
+                    style={styles.opponentCardBackImage}
+                    resizeMode="cover"
+                />
             </TouchableOpacity>
         );
     }
