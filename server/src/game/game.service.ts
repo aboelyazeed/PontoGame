@@ -330,6 +330,8 @@ export class GameService {
             score: 0,
             isReady: false,
             movesRemaining: 3, // PRD: Max 3 moves per turn
+            lockedSlots: [], // Slots locked by Biter
+            nextAttackCancelled: false, // VAR effect
         };
     }
 
@@ -548,6 +550,9 @@ export class GameService {
         // Check if slot is empty
         if (player.field[slotIndex] !== null) return false;
 
+        // Check if slot is locked (by Biter card)
+        if (player.lockedSlots.includes(slotIndex)) return false;
+
         // Find card in hand
         const cardIndex = player.hand.findIndex(c => c.id === cardId);
         if (cardIndex === -1) return false;
@@ -747,35 +752,30 @@ export class GameService {
     }
 
     /**
-     * Use an action card from hand (costs 1 move)
-     * Each action card has a different effect
-     */
+         * Use an action card from hand (costs 1 move)
+         * Each action card has a different effect
+         * 
+         * Action Card Rules:
+         * - Defensive cards (shoulder, var, red_card, yellow_card): defense phase only
+         * - Offensive cards (biter): attack phase only  
+         * - Utility cards (swap, mercato): play phase only (not during defense)
+         */
     useActionCard(
         gameState: GameState,
         odium: string,
         cardId: string,
         targetData?: {
-            slotIndex1?: number;      // For swap, biter, yellow
-            slotIndex2?: number;      // For swap (second card)
-            isOpponentSlot1?: boolean; // For swap, red, yellow
-            isOpponentSlot2?: boolean; // For swap
+            slotIndex1?: number;      // For swap (player's card), biter, shoulder, red_card, yellow_card
+            slotIndex2?: number;      // For swap (opponent's card)
+            isOpponentSlot1?: boolean; // Legacy - not used for new logic
+            isOpponentSlot2?: boolean; // Legacy - not used for new logic
         }
-    ): { success: boolean; message?: string; drawnCards?: GameCard[]; varResult?: number } {
+    ): { success: boolean; message?: string; drawnCards?: GameCard[]; varResult?: number; biterSlot?: number } {
         const player = this.getPlayer(gameState, odium);
         const opponent = this.getOpponent(gameState, odium);
         if (!player || !opponent) return { success: false, message: 'لاعب غير موجود' };
-        if (gameState.currentTurn !== odium && gameState.turnPhase !== 'defense') {
-            return { success: false, message: 'ليس دورك' };
-        }
 
-        // NEW RULE: If attacking and Ponto not drawn, block
-        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
-            return { success: false, message: 'يجب سحب كارت بونطو أولاً' };
-        }
-
-        if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
-
-        // Find action card in hand
+        // Find action card in hand first to determine its type
         const cardIndex = player.hand.findIndex(c => c.id === cardId);
         if (cardIndex === -1) return { success: false, message: 'الكارت غير موجود' };
 
@@ -783,16 +783,64 @@ export class GameService {
         if (card.type !== 'action') return { success: false, message: 'ليس كارت أكشن' };
 
         const effect = card.actionEffect;
+
+        // Phase validation based on card type
+        const isDefensiveCard = ['shoulder', 'var', 'red_card', 'yellow_card'].includes(effect || '');
+        const isOffensiveCard = ['biter'].includes(effect || '');
+        const isUtilityCard = ['swap', 'mercato'].includes(effect || '');
+
+        if (isDefensiveCard) {
+            // Defensive cards: Only during defense phase, must be defender
+            if (gameState.turnPhase !== 'defense') {
+                return { success: false, message: 'يستخدم فقط في الدفاع' };
+            }
+            if (gameState.currentTurn !== odium) {
+                return { success: false, message: 'ليس دورك للدفاع' };
+            }
+        } else if (isOffensiveCard) {
+            // Offensive cards: Only during attack phase, must be attacker
+            if (gameState.turnPhase !== 'attack') {
+                return { success: false, message: 'يستخدم فقط في الهجوم' };
+            }
+            if (gameState.currentTurn !== odium) {
+                return { success: false, message: 'ليس دورك' };
+            }
+            // Must have pending attack
+            if (!gameState.pendingAttack) {
+                return { success: false, message: 'لا يوجد هجوم نشط' };
+            }
+        } else if (isUtilityCard) {
+            // Utility cards: Only during your turn (play phase), not during defense
+            if (gameState.turnPhase === 'defense') {
+                return { success: false, message: 'لا يمكن استخدامه أثناء الدفاع' };
+            }
+            if (gameState.currentTurn !== odium) {
+                return { success: false, message: 'ليس دورك' };
+            }
+        }
+
+        // If attacking and Ponto not drawn, block non-defensive cards
+        if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
+            if (!isDefensiveCard) {
+                return { success: false, message: 'يجب سحب كارت بونطو أولاً' };
+            }
+        }
+
+        if (player.movesRemaining < 1) return { success: false, message: 'لا توجد حركات كافية' };
+
         let drawnCards: GameCard[] = [];
         let varResult: number | undefined;
+        let biterSlot: number | undefined;
 
         switch (effect) {
-            case 'shoulder': // كتف قانوني: +2 Defense during defense
-                if (gameState.turnPhase !== 'defense' || !gameState.pendingAttack) {
-                    return { success: false, message: 'يستخدم فقط في الدفاع' };
+            case 'shoulder': // كتف قانوني: +2 Defense to a specific defender
+                if (!gameState.pendingAttack) {
+                    return { success: false, message: 'لا يوجد هجوم للدفاع ضده' };
                 }
+                // Add +2 to overall defense sum (simpler approach - card bonus)
+                // The spec says "temporarily increases defense of one defending player"
+                // We add to defenseSum which represents total defense power
                 gameState.pendingAttack.defenseSum += 2;
-                player.movesRemaining -= 1;
                 break;
 
             case 'mercato': // ميركاتو: Draw 2 player cards
@@ -806,87 +854,137 @@ export class GameService {
                 }
                 break;
 
-            case 'biter': // العضاض: +4 Attack, then eject your card
-                // Used during attack phase - boost attack sum
-                if (gameState.pendingAttack) {
-                    gameState.pendingAttack.attackSum += 4;
+            case 'biter': // العضاض: +4 Attack, then slot is locked after attack
+                if (!gameState.pendingAttack) {
+                    return { success: false, message: 'لا يوجد هجوم نشط' };
                 }
-                // Eject own card from specified slot
-                if (targetData?.slotIndex1 !== undefined) {
-                    player.field[targetData.slotIndex1] = null;
+                if (targetData?.slotIndex1 === undefined) {
+                    return { success: false, message: 'يجب تحديد اللاعب المهاجم' };
                 }
+                const biterCard = player.field[targetData.slotIndex1];
+                if (!biterCard) {
+                    return { success: false, message: 'لا يوجد لاعب في هذا المكان' };
+                }
+                // Verify the card is part of the attack
+                if (!gameState.pendingAttack.attackerSlots.includes(targetData.slotIndex1)) {
+                    return { success: false, message: 'يجب أن يكون اللاعب مهاجماً' };
+                }
+                // Add +4 to attack sum
+                gameState.pendingAttack.attackSum += 4;
+                // Store slot for locking after attack resolves
+                biterSlot = targetData.slotIndex1;
+                // Remove the card and lock the slot immediately
+                player.field[targetData.slotIndex1] = null;
+                player.lockedSlots.push(targetData.slotIndex1);
                 break;
 
-            case 'red_card': // كارت أحمر: Eject opponent's FW
-                if (targetData?.slotIndex1 !== undefined) {
-                    const targetCard = opponent.field[targetData.slotIndex1];
-                    if (targetCard && targetCard.position === 'FW') {
-                        opponent.field[targetData.slotIndex1] = null;
-                    } else {
-                        return { success: false, message: 'يجب اختيار مهاجم' };
-                    }
-                } else {
+            case 'red_card': // كارت أحمر: Eject any attacking player from opponent
+                if (!gameState.pendingAttack) {
+                    return { success: false, message: 'لا يوجد هجوم للدفاع ضده' };
+                }
+                if (targetData?.slotIndex1 === undefined) {
                     return { success: false, message: 'يجب تحديد الهدف' };
                 }
+                // Must target an attacker slot
+                if (!gameState.pendingAttack.attackerSlots.includes(targetData.slotIndex1)) {
+                    return { success: false, message: 'يجب اختيار لاعب مهاجم' };
+                }
+                const targetCard = opponent.field[targetData.slotIndex1];
+                if (!targetCard) {
+                    return { success: false, message: 'لا يوجد لاعب في هذا المكان' };
+                }
+                // Subtract card's attack from attack sum
+                gameState.pendingAttack.attackSum -= (targetCard.attack || 0);
+                // Remove the attacker slot from the attack
+                gameState.pendingAttack.attackerSlots = gameState.pendingAttack.attackerSlots.filter(
+                    s => s !== targetData.slotIndex1
+                );
+                // Remove the card from field (slot remains open/usable)
+                opponent.field[targetData.slotIndex1] = null;
                 break;
 
-            case 'yellow_card': // كارت أصفر: -2 Attack, 2 yellows = eject
-                if (targetData?.slotIndex1 !== undefined) {
-                    const targetPlayer = targetData.isOpponentSlot1 ? opponent : player;
-                    const targetCard = targetPlayer.field[targetData.slotIndex1];
-                    if (targetCard) {
-                        targetCard.attack = Math.max(0, (targetCard.attack || 0) - 2);
-                        targetCard.yellowCards = (targetCard.yellowCards || 0) + 1;
-                        if (targetCard.yellowCards >= 2) {
-                            targetPlayer.field[targetData.slotIndex1] = null; // Ejected
-                        }
-                    }
-                } else {
+            case 'yellow_card': // كارت أصفر: -2 Attack for current attack, 2 yellows = eject
+                if (!gameState.pendingAttack) {
+                    return { success: false, message: 'لا يوجد هجوم للدفاع ضده' };
+                }
+                if (targetData?.slotIndex1 === undefined) {
                     return { success: false, message: 'يجب تحديد الهدف' };
+                }
+                // Must target an attacker slot
+                if (!gameState.pendingAttack.attackerSlots.includes(targetData.slotIndex1)) {
+                    return { success: false, message: 'يجب اختيار لاعب مهاجم' };
+                }
+                const yellowTargetCard = opponent.field[targetData.slotIndex1];
+                if (!yellowTargetCard) {
+                    return { success: false, message: 'لا يوجد لاعب في هذا المكان' };
+                }
+                // Reduce attack sum for this attack only (not permanent card stat)
+                gameState.pendingAttack.attackSum = Math.max(0, gameState.pendingAttack.attackSum - 2);
+                // Track yellow cards on the card (persists across turns)
+                yellowTargetCard.yellowCards = (yellowTargetCard.yellowCards || 0) + 1;
+                // Two yellows = send off
+                if (yellowTargetCard.yellowCards >= 2) {
+                    // Remove attack from sum
+                    gameState.pendingAttack.attackSum -= (yellowTargetCard.attack || 0);
+                    // Remove from attackerSlots
+                    gameState.pendingAttack.attackerSlots = gameState.pendingAttack.attackerSlots.filter(
+                        s => s !== targetData.slotIndex1
+                    );
+                    // Remove card from field (slot remains open)
+                    opponent.field[targetData.slotIndex1] = null;
                 }
                 break;
 
-            case 'var': // VAR: Draw ponto, ≥4 cancels attack, <4 = goal
-                if (gameState.turnPhase !== 'defense' || !gameState.pendingAttack) {
-                    return { success: false, message: 'يستخدم فقط في الدفاع' };
+            case 'var': // VAR: Draw ponto value, ≥4 cancels attack + next attack, <4 = goal
+                if (!gameState.pendingAttack) {
+                    return { success: false, message: 'لا يوجد هجوم للدفاع ضده' };
                 }
                 // Draw random Ponto value (1-5)
                 varResult = Math.ceil(Math.random() * 5);
                 if (varResult >= 4) {
-                    // Cancel the attack
-                    gameState.pendingAttack.attackSum = 0; // Nullify attack
+                    // Cancel the current attack
+                    gameState.pendingAttack.attackSum = 0;
+                    // Next attack against this player is also cancelled
+                    player.nextAttackCancelled = true;
                 } else {
-                    // Attack succeeds with extra damage
-                    gameState.pendingAttack.defenseSum = 0; // Defense fails
+                    // Defense fails - attacker scores
+                    gameState.pendingAttack.defenseSum = 0;
                 }
                 break;
 
-            case 'swap': // قصب بقصب: Swap any 2 cards
+            case 'swap': // قصب بقصب: Swap YOUR card with OPPONENT's card
                 if (targetData?.slotIndex1 === undefined || targetData?.slotIndex2 === undefined) {
                     return { success: false, message: 'يجب تحديد كارتين' };
                 }
-                const player1 = targetData.isOpponentSlot1 ? opponent : player;
-                const player2 = targetData.isOpponentSlot2 ? opponent : player;
-                const card1 = player1.field[targetData.slotIndex1];
-                const card2 = player2.field[targetData.slotIndex2];
-                if (!card1 || !card2) return { success: false, message: 'لا يوجد كروت' };
-                player1.field[targetData.slotIndex1] = card2;
-                player2.field[targetData.slotIndex2] = card1;
+                // slotIndex1 = player's card, slotIndex2 = opponent's card
+                const myCard = player.field[targetData.slotIndex1];
+                const oppCard = opponent.field[targetData.slotIndex2];
+                if (!myCard || !oppCard) {
+                    return { success: false, message: 'يجب أن يكون هناك لاعبين في كلا المكانين' };
+                }
+                // Check locked slots
+                if (player.lockedSlots.includes(targetData.slotIndex1)) {
+                    return { success: false, message: 'هذا المكان مقفل' };
+                }
+                if (opponent.lockedSlots.includes(targetData.slotIndex2)) {
+                    return { success: false, message: 'مكان الخصم مقفل' };
+                }
+                // Perform swap - card orientation (revealed/hidden) stays the same
+                player.field[targetData.slotIndex1] = oppCard;
+                opponent.field[targetData.slotIndex2] = myCard;
                 break;
 
             default:
                 return { success: false, message: 'تأثير غير معروف' };
         }
 
-        // Remove card from hand
+        // Remove card from hand (goes to discard pile)
         player.hand.splice(cardIndex, 1);
 
-        // Deduct move (except shoulder which uses defense moves)
-        if (effect !== 'shoulder') {
-            player.movesRemaining -= 1;
-        }
+        // Deduct move (all action cards cost 1 move)
+        player.movesRemaining -= 1;
 
-        return { success: true, drawnCards, varResult };
+        return { success: true, drawnCards, varResult, biterSlot };
     }
 
     /**
@@ -919,6 +1017,14 @@ export class GameService {
         if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
         if (gameState.turnPhase === 'defense') return { success: false, message: 'أنت في مرحلة الدفاع' };
         if (gameState.turnPhase === 'draw') return { success: false, message: 'يجب سحب الكروت أولاً' };
+
+        // VAR EFFECT: Check if opponent's VAR cancelled this attack
+        const opponent = this.getOpponent(gameState, odium);
+        if (opponent && opponent.nextAttackCancelled) {
+            // Clear the flag and cancel this attack attempt
+            opponent.nextAttackCancelled = false;
+            return { success: false, message: 'الهجوم ملغي بسبب VAR السابق!' };
+        }
 
         // NEW RULE: If ALREADY have pending attack (meaning this is 2nd attacker), MUST have drawn Ponto first
         if (gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {

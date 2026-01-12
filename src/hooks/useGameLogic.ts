@@ -37,6 +37,8 @@ export interface PlayerState {
     field: (GameCard | null)[];
     score: number;
     movesRemaining: number;
+    lockedSlots?: number[]; // Slots locked by Biter card
+    nextAttackCancelled?: boolean; // VAR effect
 }
 
 export interface PendingAttack {

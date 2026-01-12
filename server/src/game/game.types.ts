@@ -50,6 +50,8 @@ export interface PlayerState {
     score: number;
     isReady: boolean;
     movesRemaining: number; // Max 3 per turn (PRD)
+    lockedSlots: number[]; // Slots permanently locked by Biter card
+    nextAttackCancelled: boolean; // VAR effect - next attack auto-cancelled
 }
 
 // Game State
