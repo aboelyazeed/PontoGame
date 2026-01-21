@@ -8,7 +8,7 @@ import * as SecureStore from 'expo-secure-store';
 
 // ⚠️ IMPORTANT: Replace with your computer's IP address for physical device testing
 // Run 'ipconfig' in terminal and find your IPv4 address (e.g., 192.168.1.x)
-const LOCAL_IP = '192.168.1.5'; // User's IP address
+const LOCAL_IP = '192.168.1.2'; // Current IP | Alternative: '192.168.1.5'
 
 // Determine API URL based on platform
 const getApiUrl = () => {

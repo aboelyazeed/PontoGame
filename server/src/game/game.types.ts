@@ -6,14 +6,15 @@
 export type CardPosition = 'FW' | 'MF' | 'DF' | 'GK';
 export type CardType = 'player' | 'action' | 'ponto';
 export type ActionEffect = 'swap' | 'shoulder' | 'var' | 'mercato' | 'biter' | 'red_card' | 'yellow_card';
+export type ActionSubtype = 'rules' | 'tactics'; // Rules = referee decisions, Tactics = strategic plays
 
 // Legendary Abilities (PRD Section 9)
 export type LegendaryAbility =
-    | 'ronaldo'   // الدووزن - إلغاء أي أحكام/تأثيرات للخصم
+    | 'ronaldo'   // الدووزن - يمنع الخصم من لعب كروت أحكام (rules)
     | 'iniesta'   // الرسام - يمكن قلبه واستخدامه مرة ثانية
-    | 'shehata'   // أبو كف - سحب 2 بونطو أو 2 Action
+    | 'shehata'   // أبو كف - سحب بونطو إضافي في الهجوم أو الدفاع
     | 'modric'    // المايسترو - +1 ATK/DEF لكل لاعبيك
-    | 'messi'     // المعزة - إلغاء أي تكتيكات للخصم
+    | 'messi'     // المعزة - يمنع الخصم من لعب كروت تكتيكات (tactics)
     | 'yashin';   // أبو ياسين - إزالة نقاط البونطو
 
 export interface GameCard {
@@ -28,6 +29,7 @@ export interface GameCard {
     imageUrl?: string;
     isRevealed?: boolean;
     actionEffect?: ActionEffect;
+    actionSubtype?: ActionSubtype; // For action cards: 'rules' or 'tactics'
     yellowCards?: number;
     // Legendary fields
     isLegendary?: boolean;
@@ -52,6 +54,10 @@ export interface PlayerState {
     movesRemaining: number; // Max 3 per turn (PRD)
     lockedSlots: number[]; // Slots permanently locked by Biter card
     nextAttackCancelled: boolean; // VAR effect - next attack auto-cancelled
+    // Legendary effects
+    rulesBlocked: boolean; // Opponent's Ronaldo blocks this player from using rules cards
+    tacticsBlocked: boolean; // Opponent's Messi blocks this player from using tactics cards
+    extraPontoAvailable: boolean; // Abo Kaaf allows extra ponto draw
 }
 
 // Game State
@@ -88,8 +94,11 @@ export interface GameState {
         attackerId: string;              // Player who initiated attack
         attackerSlots: number[];         // Slots of revealed attackers (max 2)
         attackSum: number;               // Sum of attacker attacks + Ponto
-        pontoCard?: GameCard;            // The drawn Ponto card (visible to both)
+        pontoCard?: GameCard;            // The first drawn Ponto card (visible to both)
+        pontoCards: GameCard[];          // All ponto cards (for stacking display)
         defenseSum: number;              // Accumulated defense from revealed defenders
+        defensePontoCard?: GameCard;     // Defense ponto card (Abo Kaaf ability)
+        defensePontoCards: GameCard[];   // All defense ponto cards (for stacking display)
         defenderSlots: number[];         // Slots of revealed defenders (max 3)
         defenderMovesRemaining?: number; // Moves remaining for defender if phase persists
     };
@@ -155,6 +164,7 @@ export interface ClientToServerEvents {
     // New Attack/Defense Flow
     reveal_attacker: (data: { slotIndex: number }) => void;
     draw_ponto: () => void;
+    draw_extra_ponto: () => void; // Abo Kaaf ability
     end_attack_phase: () => void;
     reveal_defender: (data: { slotIndex: number }) => void;
     accept_goal: () => void;

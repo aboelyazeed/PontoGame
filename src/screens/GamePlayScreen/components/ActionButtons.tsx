@@ -12,6 +12,7 @@ interface PlayerState {
     odium: string;
     field: (GameCard | null)[];
     movesRemaining: number;
+    extraPontoAvailable?: boolean; // Abo Kaaf ability
 }
 
 interface ActionButtonsProps {
@@ -31,6 +32,7 @@ interface ActionButtonsProps {
     onAcceptGoal: () => void;
     onEndDefense: () => void;
     onEndTurn: () => void;
+    onDrawExtraPonto?: () => void; // Abo Kaaf ability
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -47,6 +49,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     onAcceptGoal,
     onEndDefense,
     onEndTurn,
+    onDrawExtraPonto,
 }) => {
     // Find selected card info for reveal button
     const getRevealButton = () => {
@@ -82,10 +85,27 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         return null;
     };
 
+    // Check if extra ponto button should show (Abo Kaaf ability)
+    const showExtraPonto = myPlayer?.extraPontoAvailable && 
+        (turnPhase === 'attack' || turnPhase === 'defense') && 
+        isMyTurn && 
+        pendingAttack;
+
     return (
         <View style={styles.actionButtons}>
             {/* Reveal Button (Contextual) */}
             {getRevealButton()}
+
+            {/* Abo Kaaf Extra Ponto Button */}
+            {showExtraPonto && (
+                <TouchableOpacity
+                    style={styles.extraPontoButton}
+                    onPress={onDrawExtraPonto}
+                >
+                    <MaterialCommunityIcons name="plus-circle" size={18} color="#FFD700" />
+                    <Text style={styles.extraPontoText} numberOfLines={1}>بونطو إضافي</Text>
+                </TouchableOpacity>
+            )}
 
             {/* Defense Phase Buttons */}
             {isDefensePhase && (
@@ -133,3 +153,4 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 };
 
 export default ActionButtons;
+

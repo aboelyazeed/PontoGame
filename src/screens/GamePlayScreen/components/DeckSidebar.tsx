@@ -12,9 +12,11 @@ interface DeckSidebarProps {
     isMyTurn: boolean;
     turnPhase: string;
     isAttackPontoNeeded?: boolean;
+    extraPontoAvailable?: boolean; // Abo Kaaf ability
     movesRemaining?: number;
     onDrawFromDeck?: (deckType: 'player' | 'action') => void;
     onDrawPonto?: () => void;
+    onDrawExtraPonto?: () => void; // Abo Kaaf ability
 }
 
 const DeckSidebar: React.FC<DeckSidebarProps> = ({
@@ -22,9 +24,11 @@ const DeckSidebar: React.FC<DeckSidebarProps> = ({
     isMyTurn,
     turnPhase,
     isAttackPontoNeeded = false,
+    extraPontoAvailable = false,
     movesRemaining = 0,
     onDrawFromDeck,
     onDrawPonto,
+    onDrawExtraPonto,
 }) => {
     if (position === 'left') {
         const isDrawPhase = turnPhase === 'draw';
@@ -64,25 +68,42 @@ const DeckSidebar: React.FC<DeckSidebarProps> = ({
     }
 
     // Right sidebar - Ponto Deck
+    // Can draw during attack phase (normal), or when Abo Kaaf ability is active
+    const canDrawNormalPonto = isAttackPontoNeeded;
+    const canDrawExtraPonto = extraPontoAvailable && (turnPhase === 'attack' || turnPhase === 'defense') && isMyTurn;
+    const isActive = canDrawNormalPonto || canDrawExtraPonto;
+
+    const handlePontoDeckPress = () => {
+        if (canDrawNormalPonto) {
+            onDrawPonto?.();
+        } else if (canDrawExtraPonto) {
+            onDrawExtraPonto?.();
+        }
+    };
+
     return (
         <View style={styles.deckSidebarRight}>
             <TouchableOpacity
                 style={[
                     styles.pontoDeckCard,
-                    isAttackPontoNeeded && styles.pontoDeckCardActive,
+                    isActive && styles.pontoDeckCardActive,
+                    canDrawExtraPonto && !canDrawNormalPonto && styles.pontoDeckCardLegendary,
                 ]}
-                onPress={() => onDrawPonto?.()}
-                disabled={!isAttackPontoNeeded}
+                onPress={handlePontoDeckPress}
+                disabled={!isActive}
             >
                 <Image
                     source={CARD_BACK_IMAGES.ponto}
                     style={styles.pontoDeckImage}
                     resizeMode="cover"
                 />
-                <Text style={[styles.deckLabel, isAttackPontoNeeded && styles.deckLabelActive]}>بونطو</Text>
+                <Text style={[styles.deckLabel, isActive && styles.deckLabelActive]}>
+                    {canDrawExtraPonto && !canDrawNormalPonto ? 'أبو كف' : 'بونطو'}
+                </Text>
             </TouchableOpacity>
         </View>
     );
 };
 
 export default DeckSidebar;
+

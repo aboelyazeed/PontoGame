@@ -23,11 +23,16 @@ const HandCard: React.FC<HandCardProps> = ({
     disabled = false,
 }) => {
     const cardImage = getCardImage(card);
+    const isLegendary = card.isLegendary;
 
     return (
         <TouchableOpacity
             key={card.id}
-            style={[styles.handCard, isSelected && styles.handCardSelected]}
+            style={[
+                styles.handCard, 
+                isSelected && styles.handCardSelected,
+                isLegendary && styles.handCardLegendary,
+            ]}
             onPress={() => onPress(card)}
             disabled={disabled}
         >
@@ -45,8 +50,6 @@ const HandCard: React.FC<HandCardProps> = ({
                 </View>
             )}
             <View style={styles.handCardGradient} />
-
-
 
             {card.type === 'action' && (
                 <Text style={styles.handCardActionLabel}>أكشن</Text>

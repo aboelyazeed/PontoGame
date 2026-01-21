@@ -79,6 +79,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
         acceptGoal,
         endDefense,
         drawPonto,
+        drawExtraPonto, // Abo Kaaf ability
         endTurn,
         surrender,
         clearGameEnd,
@@ -392,7 +393,9 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                             isMyTurn={isMyTurn}
                             turnPhase={gameState.turnPhase || 'play'}
                             isAttackPontoNeeded={isAttackPontoNeeded}
+                            extraPontoAvailable={myPlayer?.extraPontoAvailable}
                             onDrawPonto={drawPonto}
+                            onDrawExtraPonto={drawExtraPonto}
                         />
                     </View>
 
@@ -427,6 +430,7 @@ const GamePlayScreen: React.FC<GamePlayScreenProps> = ({ onBack, initialGameStat
                         onAcceptGoal={acceptGoal}
                         onEndDefense={endDefense}
                         onEndTurn={endTurn}
+                        onDrawExtraPonto={drawExtraPonto}
                     />
                 </View>
 

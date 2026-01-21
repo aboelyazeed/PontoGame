@@ -271,6 +271,16 @@ export const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 5,
     },
+    pontoDeckCardLegendary: {
+        borderColor: '#FFD700',
+        borderWidth: 2,
+        opacity: 1,
+        shadowColor: '#FFD700',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 8,
+        elevation: 6,
+    },
     pontoDeckImage: {
         width: '100%',
         height: '100%',
@@ -337,6 +347,30 @@ export const styles = StyleSheet.create({
     fieldSlotTarget: {
         borderColor: GAME_COLORS.error,
         borderWidth: 2,
+    },
+    // Legendary card styling
+    fieldSlotLegendary: {
+        borderColor: '#FFD700', // Gold
+        borderWidth: 2,
+        shadowColor: '#FFD700',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 6,
+        elevation: 6,
+    },
+    legendaryBadge: {
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 10,
+        width: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    legendaryBadgeText: {
+        fontSize: 10,
     },
     cardBack: {
         flex: 1,
@@ -472,6 +506,24 @@ export const styles = StyleSheet.create({
     battleSide: {
         alignItems: 'center',
     },
+    // Battle side with ponto cards above it
+    battleSideWithPonto: {
+        alignItems: 'center',
+        minWidth: 50,
+    },
+    // Container for stacked ponto cards above score
+    sideCardStack: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+    },
+    // Smaller ponto image for side display
+    sidePontoImage: {
+        width: 40,
+        height: 40,
+        borderRadius: 4,
+    },
     battleLabel: {
         color: GAME_COLORS.textSecondary,
         fontSize: 10,
@@ -484,6 +536,68 @@ export const styles = StyleSheet.create({
     },
     battleVs: {
         color: GAME_COLORS.warning,
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    // Attack ponto cards floating above score container (RIGHT side)
+    attackPontoFloat: {
+        position: 'absolute',
+        top: -50, // Sit flush on top of scoreboard (56 height cards approx)
+        right: 0,
+        alignItems: 'center',
+        zIndex: 20,
+    },
+    // Defense ponto cards floating above score container (LEFT side)
+    defensePontoFloat: {
+        position: 'absolute',
+        top: -50, // Sit flush on top of scoreboard
+        left: 0,
+        alignItems: 'center',
+        zIndex: 20,
+    },
+    // Row container for ponto cards
+    pontoCardsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    // Floating ponto card image - Same size as deck (56x56)
+    floatPontoImage: {
+        width: 56,
+        height: 56,
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    // Base total box style
+    pontoTotalBox: {
+        position: 'absolute',
+        backgroundColor: 'rgba(0,0,0,0.95)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: GAME_COLORS.ponto,
+        minWidth: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 25,
+        bottom: -6, // Align to bottom, slight overlap
+    },
+    // Specific positioning for Attack (Right side)
+    pontoTotalBoxAttack: {
+        right: -8, 
+    },
+    // Specific positioning for Defense (Left side)
+    pontoTotalBoxDefense: {
+        left: -8,
+    },
+    pontoTotalText: {
+        color: GAME_COLORS.ponto,
         fontSize: 12,
         fontWeight: 'bold',
     },
@@ -587,11 +701,31 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
     },
+    // Abo Kaaf Extra Ponto Button (golden)
+    extraPontoButton: {
+        flex: 1,
+        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+        borderWidth: 2,
+        borderColor: '#FFD700',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    extraPontoText: {
+        color: '#FFD700',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
     pontoCardDisplay: {
         position: 'absolute',
-        top: -65,
-        alignSelf: 'center',
+        top: -70,
+        left: 0,
+        right: 0,
         alignItems: 'center',
+        justifyContent: 'center',
         zIndex: 30,
     },
     pontoCardImage: {
@@ -602,6 +736,32 @@ export const styles = StyleSheet.create({
     },
     pontoCardValue: {
         color: GAME_COLORS.ponto,
+        fontSize: 10,
+        fontWeight: 'bold',
+        marginTop: 2,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+        borderRadius: 4,
+    },
+    // Container for stacked ponto cards (horizontal row with overlap)
+    pontoCardsStack: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // Defense ponto card display (positioned below defense value)
+    defensePontoCardDisplay: {
+        position: 'absolute',
+        bottom: -70,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 30,
+    },
+    defensePontoCardValue: {
+        color: '#3b82f6', // Blue for defense
         fontSize: 10,
         fontWeight: 'bold',
         marginTop: 2,
@@ -759,6 +919,27 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         textShadowColor: 'rgba(0,0,0,0.8)',
         textShadowRadius: 2,
+    },
+    // Legendary hand card styling
+    handCardLegendary: {
+        borderColor: '#FFD700', // Gold
+        borderWidth: 2,
+        shadowColor: '#FFD700',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 6,
+        elevation: 6,
+    },
+    handCardLegendaryBadge: {
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 10,
+        width: 18,
+        height: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 
     // ACTION MODAL

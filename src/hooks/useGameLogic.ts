@@ -39,14 +39,21 @@ export interface PlayerState {
     movesRemaining: number;
     lockedSlots?: number[]; // Slots locked by Biter card
     nextAttackCancelled?: boolean; // VAR effect
+    // Legendary effects
+    rulesBlocked?: boolean;
+    tacticsBlocked?: boolean;
+    extraPontoAvailable?: boolean; // Abo Kaaf ability
 }
 
 export interface PendingAttack {
     attackerId: string;
     attackerSlots: number[];
     pontoCard?: GameCard;
+    pontoCards?: GameCard[];
     attackSum: number;
     defenseSum: number;
+    defensePontoCard?: GameCard;
+    defensePontoCards?: GameCard[];
     defenderMovesRemaining?: number;
     defenderSlots: number[];
 }
@@ -434,6 +441,11 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         socketService.emit('draw_ponto');
     }, []);
 
+    // Abo Kaaf ability - draw extra ponto (FREE, no move cost)
+    const drawExtraPonto = useCallback(() => {
+        socketService.emit('draw_extra_ponto');
+    }, []);
+
     const endTurn = useCallback(() => {
         socketService.emit('end_turn');
     }, []);
@@ -479,6 +491,7 @@ export const useGameLogic = (myPlayerId: string | null, initialGameState?: GameS
         acceptGoal,
         endDefense,
         drawPonto,
+        drawExtraPonto, // Abo Kaaf ability
         endTurn,
         surrender,
         clearGameEnd,

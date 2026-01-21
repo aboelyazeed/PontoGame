@@ -7,9 +7,10 @@ import { Platform } from 'react-native';
 
 // Use 10.0.2.2 for Android Emulator, localhost for iOS/Web
 // Use your computer's IP address for physical device testing
+// Current IP: 192.168.1.2 | Alternative: 192.168.1.5
 const DEV_URL = Platform.OS === 'android'
-    ? 'http://192.168.1.5:3000'
-    : 'http://192.168.1.5:3000';
+    ? 'http://192.168.1.2:3000'
+    : 'http://192.168.1.2:3000';
 
 class SocketService {
     socket: Socket | null = null;

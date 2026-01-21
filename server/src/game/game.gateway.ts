@@ -936,6 +936,32 @@ export function setupGameSocket(io: Server) {
             }
         });
 
+        // Draw extra Ponto card (Abo Kaaf ability) - FREE, no move cost
+        socket.on('draw_extra_ponto', () => {
+            const game = gameService.getGameByPlayer(socket.userId!);
+            if (!game) {
+                socket.emit('error', { message: 'لا توجد لعبة نشطة', code: 'NO_GAME' });
+                return;
+            }
+
+            const result = gameService.drawExtraPonto(game, socket.userId!);
+
+            if (result.success) {
+                const roomSocketId = `game:${game.id}`;
+                io.to(roomSocketId).emit('extra_ponto_drawn', {
+                    playerId: socket.userId!,
+                    pontoCard: result.pontoCard!,
+                    newSum: result.newSum!,
+                    message: result.message,
+                    phase: game.turnPhase,
+                });
+                game.serverTime = Date.now();
+                io.to(roomSocketId).emit('game_update', game);
+            } else {
+                socket.emit('error', { message: result.message || 'خطأ', code: 'ACTION_FAILED' });
+            }
+        });
+
         // End attack phase - switch to defense
         socket.on('end_attack_phase', () => {
             const game = gameService.getGameByPlayer(socket.userId!);

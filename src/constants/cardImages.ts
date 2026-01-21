@@ -10,6 +10,10 @@ export const PLAYER_CARD_IMAGES: Record<string, any> = {
     'CDM': require('../../assets/Cards/Players/Commen/CDM.png'),
     'FW': require('../../assets/Cards/Players/Commen/FW.png'),
     'ST': require('../../assets/Cards/Players/Commen/ST.png'),
+    // Legendary/Hero cards
+    'Ronaldo': require('../../assets/Cards/Players/Heros/Ronaldo.png'),
+    'Messi': require('../../assets/Cards/Players/Heros/Messi.png'),
+    'AboKaf': require('../../assets/Cards/Players/Heros/AboKaf.png'),
     // Legacy mappings for backwards compatibility
     'GK.png': require('../../assets/Cards/Players/Commen/GK.png'),
     'DF.png': require('../../assets/Cards/Players/Commen/CB.png'),

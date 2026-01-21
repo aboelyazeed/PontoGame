@@ -68,6 +68,7 @@ const FieldSlot: React.FC<FieldSlotProps> = ({
 
     // Revealed card (opponent or player)
     const cardImage = getCardImage(card);
+    const isLegendary = card.isLegendary;
 
     return (
         <TouchableOpacity
@@ -77,6 +78,7 @@ const FieldSlot: React.FC<FieldSlotProps> = ({
                 !isOpponent && isSelected && styles.fieldSlotSelected,
                 !isOpponent && isAttacker && styles.fieldSlotAttacker,
                 isTarget && styles.fieldSlotTarget,
+                isLegendary && styles.fieldSlotLegendary,
             ]}
             onPress={handlePress}
             disabled={disabled}

@@ -102,21 +102,25 @@ const STRIKER_CARDS: GameCard[] = generateCards(4, {
 });
 
 // ACTION CARDS
+// Rules = referee decisions (VAR, red_card, yellow_card)
+// Tactics = strategic plays (swap, shoulder, mercato, biter)
 const ACTION_CARDS: GameCard[] = [
-    { id: 'act_swap_1', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)', actionEffect: 'swap' },
-    { id: 'act_swap_2', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)', actionEffect: 'swap' },
-    { id: 'act_shoulder_1', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع', actionEffect: 'shoulder' },
-    { id: 'act_shoulder_2', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع', actionEffect: 'shoulder' },
-    { id: 'act_var_1', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف', actionEffect: 'var' },
-    { id: 'act_var_2', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف', actionEffect: 'var' },
-    { id: 'act_mercato_1', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين', actionEffect: 'mercato' },
-    { id: 'act_mercato_2', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين', actionEffect: 'mercato' },
-    { id: 'act_biter_1', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك', actionEffect: 'biter' },
-    { id: 'act_biter_2', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك', actionEffect: 'biter' },
-    { id: 'act_red_1', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم', actionEffect: 'red_card' },
-    { id: 'act_red_2', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم', actionEffect: 'red_card' },
-    { id: 'act_yellow_1', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد', actionEffect: 'yellow_card' },
-    { id: 'act_yellow_2', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد', actionEffect: 'yellow_card' },
+    // Tactics cards
+    { id: 'act_swap_1', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)', actionEffect: 'swap', actionSubtype: 'tactics' },
+    { id: 'act_swap_2', type: 'action', name: 'Swap', nameAr: 'قصب بقصب', description: 'تبادل لاعب بلاعب (تختار أنت)', actionEffect: 'swap', actionSubtype: 'tactics' },
+    { id: 'act_shoulder_1', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع', actionEffect: 'shoulder', actionSubtype: 'tactics' },
+    { id: 'act_shoulder_2', type: 'action', name: 'Shoulder', nameAr: 'كتف قانوني', description: '+2 Defense أثناء الدفاع', actionEffect: 'shoulder', actionSubtype: 'tactics' },
+    { id: 'act_mercato_1', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين', actionEffect: 'mercato', actionSubtype: 'tactics' },
+    { id: 'act_mercato_2', type: 'action', name: 'Mercato', nameAr: 'ميركاتو', description: 'سحب 2 لاعبين', actionEffect: 'mercato', actionSubtype: 'tactics' },
+    { id: 'act_biter_1', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك', actionEffect: 'biter', actionSubtype: 'tactics' },
+    { id: 'act_biter_2', type: 'action', name: 'Biter', nameAr: 'العضاض', description: '+4 Attack ثم طرد لاعبك', actionEffect: 'biter', actionSubtype: 'tactics' },
+    // Rules cards (referee decisions)
+    { id: 'act_var_1', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف', actionEffect: 'var', actionSubtype: 'rules' },
+    { id: 'act_var_2', type: 'action', name: 'VAR', nameAr: 'VAR', description: 'اسحب بونطو: ≥4 تلغى الهجمة، <4 هدف', actionEffect: 'var', actionSubtype: 'rules' },
+    { id: 'act_red_1', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم', actionEffect: 'red_card', actionSubtype: 'rules' },
+    { id: 'act_red_2', type: 'action', name: 'Red Card', nameAr: 'كارت أحمر', description: 'طرد مهاجم من الخصم', actionEffect: 'red_card', actionSubtype: 'rules' },
+    { id: 'act_yellow_1', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد', actionEffect: 'yellow_card', actionSubtype: 'rules' },
+    { id: 'act_yellow_2', type: 'action', name: 'Yellow Card', nameAr: 'كارت أصفر', description: '-2 Attack، بطاقتين = طرد', actionEffect: 'yellow_card', actionSubtype: 'rules' },
 ];
 
 // PONTO CARDS - 8 total cards
@@ -137,7 +141,7 @@ const PONTO_CARDS: GameCard[] = [
     { id: 'ponto_1_1', type: 'ponto', name: 'Ponto +1', nameAr: 'بونطو +1', attack: 1, imageUrl: 'Ponto +1.png' },
 ];
 
-// LEGENDARY PLAYER CARDS (PRD Section 9) - 1 of each
+// LEGENDARY PLAYER CARDS - Only one of each hero exists
 const LEGENDARY_CARDS: GameCard[] = [
     {
         id: 'leg_ronaldo',
@@ -147,45 +151,10 @@ const LEGENDARY_CARDS: GameCard[] = [
         position: 'FW',
         attack: 8,
         defense: 0,
-        description: 'إلغاء أي أحكام/تأثيرات للخصم',
+        description: 'يمنع الخصم من لعب كروت الأحكام (VAR، الكروت الملونة)',
+        imageUrl: 'Ronaldo',
         isLegendary: true,
         legendaryAbility: 'ronaldo',
-    },
-    {
-        id: 'leg_iniesta',
-        type: 'player',
-        name: 'Iniesta - The Artist',
-        nameAr: 'إنيستا – الرسام',
-        position: 'MF',
-        attack: 6,
-        defense: 6,
-        description: 'بعد الاستخدام يمكن قلبه واستخدامه مرة ثانية فقط',
-        isLegendary: true,
-        legendaryAbility: 'iniesta',
-    },
-    {
-        id: 'leg_shehata',
-        type: 'player',
-        name: 'Shehata - Abu Kaff',
-        nameAr: 'شحاتة أبو كف',
-        position: 'MF',
-        attack: 4,
-        defense: 2,
-        description: 'سحب 2 بونطو في الهجوم أو 2 Special دفاعي',
-        isLegendary: true,
-        legendaryAbility: 'shehata',
-    },
-    {
-        id: 'leg_modric',
-        type: 'player',
-        name: 'Modric - The Maestro',
-        nameAr: 'مودريتش – المايسترو',
-        position: 'MF',
-        attack: 6,
-        defense: 6,
-        description: '+1 Attack & Defense لكل لاعبيك طالما في الملعب',
-        isLegendary: true,
-        legendaryAbility: 'modric',
     },
     {
         id: 'leg_messi',
@@ -195,21 +164,23 @@ const LEGENDARY_CARDS: GameCard[] = [
         position: 'FW',
         attack: 8,
         defense: 0,
-        description: 'إلغاء أي تكتيكات للخصم عند لعبه',
+        description: 'يمنع الخصم من لعب كروت التكتيكات',
+        imageUrl: 'Messi',
         isLegendary: true,
         legendaryAbility: 'messi',
     },
     {
-        id: 'leg_yashin',
+        id: 'leg_shehata',
         type: 'player',
-        name: 'Lev Yashin - Abu Yaseen',
-        nameAr: 'ليف ياشين – أبو ياسين',
-        position: 'GK',
-        attack: 0,
-        defense: 9,
-        description: 'إزالة نقاط كارت البونطو أثناء الدفاع',
+        name: 'Abo Kaaf',
+        nameAr: 'أبو كف',
+        position: 'MF',
+        attack: 4,
+        defense: 2,
+        description: 'يسمح بسحب بونطو إضافي في الهجوم أو الدفاع',
+        imageUrl: 'AboKaf',
         isLegendary: true,
-        legendaryAbility: 'yashin',
+        legendaryAbility: 'shehata',
     },
 ];
 
@@ -243,8 +214,11 @@ function shuffleArray<T>(array: T[]): T[] {
 
 // Create a fresh shuffled copy of all decks for a new game
 function createShuffledDecks() {
+    // Combine regular players with legendary cards
+    const allPlayerCards = [...PLAYER_CARDS, ...LEGENDARY_CARDS];
+    
     // Create deep copies with unique IDs
-    const playerDeck = shuffleArray(PLAYER_CARDS.map((card, i) => ({
+    const playerDeck = shuffleArray(allPlayerCards.map((card, i) => ({
         ...card,
         id: `${card.id}_${Date.now()}_${i}`,
     })));
@@ -256,6 +230,8 @@ function createShuffledDecks() {
         ...card,
         id: `${card.id}_${Date.now()}_${i}`,
     })));
+    
+    console.log(`🃏 Deck created: ${playerDeck.length} players (${LEGENDARY_CARDS.length} legends), ${actionDeck.length} actions, ${pontoDeck.length} pontos`);
     
     return { 
         playerDeck, 
@@ -399,7 +375,45 @@ export class GameService {
             movesRemaining: 3, // PRD: Max 3 moves per turn
             lockedSlots: [], // Slots locked by Biter
             nextAttackCancelled: false, // VAR effect
+            // Legendary effects (set when opponent reveals legendary)
+            rulesBlocked: false,
+            tacticsBlocked: false,
+            extraPontoAvailable: false,
         };
+    }
+
+    /**
+     * Apply legendary ability when a legendary card is revealed
+     * @returns message describing the ability activated
+     */
+    private applyLegendaryAbility(gameState: GameState, card: GameCard, owner: PlayerState): string | null {
+        if (!card.isLegendary || !card.legendaryAbility) return null;
+        
+        const opponent = this.getOpponent(gameState, owner.odium);
+        if (!opponent) return null;
+
+        switch (card.legendaryAbility) {
+            case 'ronaldo':
+                // Block opponent from using rules cards (VAR, red card, yellow card)
+                opponent.rulesBlocked = true;
+                console.log(`🌟 LEGENDARY: Ronaldo activated - ${opponent.odiumInfo.displayName} cannot use rules cards!`);
+                return 'الدووزن! الخصم لا يستطيع استخدام كروت الأحكام';
+            
+            case 'messi':
+                // Block opponent from using tactics cards (swap, shoulder, mercato, biter)
+                opponent.tacticsBlocked = true;
+                console.log(`🌟 LEGENDARY: Messi activated - ${opponent.odiumInfo.displayName} cannot use tactics cards!`);
+                return 'المعزة! الخصم لا يستطيع استخدام كروت التكتيكات';
+            
+            case 'shehata':
+                // Allow owner to draw extra ponto in attack or defense
+                owner.extraPontoAvailable = true;
+                console.log(`🌟 LEGENDARY: Abo Kaaf activated - ${owner.odiumInfo.displayName} can draw extra ponto!`);
+                return 'أبو كف! يمكنك سحب بونطو إضافي';
+            
+            default:
+                return null;
+        }
     }
 
     /**
@@ -737,26 +751,32 @@ export class GameService {
     /**
      * Flip a face-down card on your field to reveal it (costs 1 move)
      */
-    flipCard(gameState: GameState, odium: string, slotIndex: number): boolean {
+    flipCard(gameState: GameState, odium: string, slotIndex: number): { success: boolean; legendaryMessage?: string } {
         const player = this.getPlayer(gameState, odium);
-        if (!player) return false;
-        if (gameState.currentTurn !== odium) return false;
+        if (!player) return { success: false };
+        if (gameState.currentTurn !== odium) return { success: false };
 
         // NEW RULE: If attacking and Ponto not drawn, block
         if (gameState.turnPhase === 'attack' && gameState.pendingAttack && !gameState.pendingAttack.pontoCard) {
-            return false;
+            return { success: false };
         }
 
-        if (player.movesRemaining < 1) return false;
+        if (player.movesRemaining < 1) return { success: false };
 
         const card = player.field[slotIndex];
-        if (!card) return false;
-        if (card.isRevealed) return false; // Already revealed
+        if (!card) return { success: false };
+        if (card.isRevealed) return { success: false }; // Already revealed
 
         card.isRevealed = true;
         player.movesRemaining -= 1;
 
-        return true;
+        // Apply legendary ability if this is a legendary card
+        let legendaryMessage: string | undefined;
+        if (card.isLegendary) {
+            legendaryMessage = this.applyLegendaryAbility(gameState, card, player) || undefined;
+        }
+
+        return { success: true, legendaryMessage };
     }
 
     /**
@@ -915,6 +935,15 @@ export class GameService {
         if (card.type !== 'action') return { success: false, message: 'ليس كارت أكشن' };
 
         const effect = card.actionEffect;
+        const subtype = card.actionSubtype;
+
+        // LEGENDARY BLOCKING: Check if opponent's legendary blocks this card type
+        if (subtype === 'rules' && player.rulesBlocked) {
+            return { success: false, message: 'الدووزن (رونالدو) يمنعك من استخدام كروت الأحكام!' };
+        }
+        if (subtype === 'tactics' && player.tacticsBlocked) {
+            return { success: false, message: 'المعزة (ميسي) يمنعك من استخدام كروت التكتيكات!' };
+        }
 
         // Phase validation based on card type
         const isDefensiveCard = ['shoulder', 'var', 'red_card', 'yellow_card'].includes(effect || '');
@@ -1179,7 +1208,7 @@ export class GameService {
         gameState: GameState,
         odium: string,
         slotIndex: number
-    ): { success: boolean; message?: string; pontoCard?: GameCard; attackSum?: number } {
+    ): { success: boolean; message?: string; pontoCard?: GameCard; attackSum?: number; legendaryMessage?: string } {
         const player = this.getPlayer(gameState, odium);
         if (!player) return { success: false, message: 'لاعب غير موجود' };
         if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
@@ -1216,6 +1245,12 @@ export class GameService {
         card.isRevealed = true;
         player.movesRemaining -= 1;
 
+        // Apply legendary ability if this is a legendary card
+        let legendaryMessage: string | undefined;
+        if (card.isLegendary) {
+            legendaryMessage = this.applyLegendaryAbility(gameState, card, player) || undefined;
+        }
+
         // Set phase to attack
         gameState.turnPhase = 'attack';
 
@@ -1227,12 +1262,15 @@ export class GameService {
                 attackSum: (card.attack || 0),
                 defenseSum: 0,
                 defenderSlots: [],
+                pontoCards: [],
+                defensePontoCards: [],
             };
 
             return {
                 success: true,
                 pontoCard: undefined,
-                attackSum: gameState.pendingAttack.attackSum
+                attackSum: gameState.pendingAttack.attackSum,
+                legendaryMessage
             };
         }
 
@@ -1252,7 +1290,8 @@ export class GameService {
 
         return {
             success: true,
-            attackSum: gameState.pendingAttack.attackSum
+            attackSum: gameState.pendingAttack.attackSum,
+            legendaryMessage
         };
     }
 
@@ -1277,6 +1316,7 @@ export class GameService {
 
         const pontoCard = this.drawPontoCard(gameState);
         gameState.pendingAttack.pontoCard = pontoCard;
+        gameState.pendingAttack.pontoCards.push(pontoCard);
         gameState.pendingAttack.attackSum += (pontoCard.attack || 0);
 
         // Auto-end attack if moves exhausted
@@ -1325,6 +1365,66 @@ export class GameService {
     }
 
     /**
+     * Draw extra Ponto card (Abo Kaaf ability) - FREE, no move cost
+     * Works in attack phase (adds to attack sum) or defense phase (adds to defense sum)
+     */
+    drawExtraPonto(
+        gameState: GameState,
+        odium: string
+    ): { success: boolean; message?: string; pontoCard?: GameCard; newSum?: number; isDefense?: boolean } {
+        const player = this.getPlayer(gameState, odium);
+        if (!player) return { success: false, message: 'لاعب غير موجود' };
+        if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
+        
+        // Check if Abo Kaaf ability is active
+        if (!player.extraPontoAvailable) {
+            return { success: false, message: 'ليس لديك قدرة سحب بونطو إضافي' };
+        }
+
+        // Must be in attack or defense phase
+        if (gameState.turnPhase !== 'attack' && gameState.turnPhase !== 'defense') {
+            return { success: false, message: 'يجب أن تكون في مرحلة الهجوم أو الدفاع' };
+        }
+
+        if (!gameState.pendingAttack) {
+            return { success: false, message: 'لا يوجد هجوم نشط' };
+        }
+
+        // Draw the ponto card (no move cost!)
+        const pontoCard = this.drawPontoCard(gameState);
+        
+        // Use the ability (one-time use per reveal)
+        player.extraPontoAvailable = false;
+
+        if (gameState.turnPhase === 'attack') {
+            // Add to attack sum and arrays
+            gameState.pendingAttack.pontoCards.push(pontoCard);
+            gameState.pendingAttack.attackSum += (pontoCard.attack || 0);
+            console.log(`🌟 Abo Kaaf extra ponto: +${pontoCard.attack} to attack (total: ${gameState.pendingAttack.attackSum})`);
+            return {
+                success: true,
+                pontoCard,
+                newSum: gameState.pendingAttack.attackSum,
+                isDefense: false,
+                message: `أبو كف! بونطو إضافي +${pontoCard.attack}`
+            };
+        } else {
+            // Add to defense sum and arrays
+            gameState.pendingAttack.defensePontoCard = pontoCard;
+            gameState.pendingAttack.defensePontoCards.push(pontoCard);
+            gameState.pendingAttack.defenseSum += (pontoCard.attack || 0);
+            console.log(`🌟 Abo Kaaf extra ponto: +${pontoCard.attack} to defense (total: ${gameState.pendingAttack.defenseSum})`);
+            return {
+                success: true,
+                pontoCard,
+                newSum: gameState.pendingAttack.defenseSum,
+                isDefense: true,
+                message: `أبو كف! بونطو دفاعي إضافي +${pontoCard.attack}`
+            };
+        }
+    }
+
+    /**
      * Reveal a face-down defender on your field to add to defense
      * Costs 1 move (max 3 defenders with 3 moves)
      */
@@ -1332,7 +1432,7 @@ export class GameService {
         gameState: GameState,
         odium: string,
         slotIndex: number
-    ): { success: boolean; message?: string; defenseSum?: number } {
+    ): { success: boolean; message?: string; defenseSum?: number; legendaryMessage?: string } {
         const player = this.getPlayer(gameState, odium);
         if (!player) return { success: false, message: 'لاعب غير موجود' };
         if (gameState.currentTurn !== odium) return { success: false, message: 'ليس دورك' };
@@ -1351,13 +1451,20 @@ export class GameService {
         card.isRevealed = true;
         player.movesRemaining -= 1;
 
+        // Apply legendary ability if this is a legendary card
+        let legendaryMessage: string | undefined;
+        if (card.isLegendary) {
+            legendaryMessage = this.applyLegendaryAbility(gameState, card, player) || undefined;
+        }
+
         // Add to defense sum
         gameState.pendingAttack.defenderSlots.push(slotIndex);
         gameState.pendingAttack.defenseSum += (card.defense || 0);
 
         return {
             success: true,
-            defenseSum: gameState.pendingAttack.defenseSum
+            defenseSum: gameState.pendingAttack.defenseSum,
+            legendaryMessage
         };
     }
 
